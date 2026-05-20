@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Assamese Tourism Chatbot',
-  description: 'Assamese-English code-mixed tourism chatbot — M.Tech Thesis, Gauhati University',
+  description: 'AI-powered tourism assistant for Assam — ask in Assamese, English, or code-mixed queries.',
   keywords: ['Assamese', 'chatbot', 'tourism', 'NLP', 'code-mixed', 'MuRIL'],
 }
 

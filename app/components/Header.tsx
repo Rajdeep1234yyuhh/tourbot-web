@@ -29,10 +29,6 @@ export default function Header() {
              className="text-sm text-stone-500 hover:text-stone-900 transition-colors font-medium">
             Chat
           </Link>
-          <Link href="#contact"
-             className="text-sm text-stone-500 hover:text-stone-900 transition-colors font-medium">
-            Contact
-          </Link>
         </nav>
 
         {/* Links */}

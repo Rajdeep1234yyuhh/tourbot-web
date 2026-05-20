@@ -18,7 +18,9 @@ const SYSTEM_PROMPT =
   "(2) add no facts that are not in the retrieved answer; " +
   "(3) be concise (2–4 sentences); " +
   "(4) if the user wrote in Assamese or code-mixed language, reply in the same friendly mixed style; " +
-  "(5) never expose internal labels like 'Retrieved answer:' or 'Intent:'.";
+  "(5) never expose internal labels like 'Retrieved answer:' or 'Intent:'; " +
+  "(6) NEVER use bullet points, dashes, hyphens, or numbered lists — write only in plain flowing prose sentences; " +
+  "(7) NEVER use Bengali words — the language is Assamese, not Bengali; these words are forbidden: 'jemon', 'jonno', 'ache' — rephrase naturally without them instead of substituting a fixed replacement.";
 
 type Turn = { role: string; content: string };
 

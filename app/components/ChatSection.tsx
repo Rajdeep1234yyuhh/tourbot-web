@@ -102,11 +102,14 @@ export default function ChatSection() {
   const [rawAnswer,  setRawAnswer]  = useState<string>('')
   const [hfHistory,  setHfHistory]  = useState<{role:string;content:string}[]>([])
 
-  const bottomRef  = useRef<HTMLDivElement>(null)
-  const inputRef   = useRef<HTMLTextAreaElement>(null)
+  const msgsRef  = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > 0 || loading) {
+      const el = msgsRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }
   }, [messages, loading])
 
   const sendMessage = useCallback(async (text: string) => {
@@ -168,35 +171,21 @@ export default function ChatSection() {
   const hasDebug = !!debug.intent
 
   return (
-    <section id="chat" className="py-16 px-6">
+    <section id="chat" className="py-4 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
 
-        {/* Section header */}
-        <div className="mb-10 max-w-xl">
-          <p className="text-xs font-mono text-amber-600 tracking-widest uppercase mb-3">
-            Live Demo
-          </p>
-          <h2 className="font-display text-3xl font-semibold text-stone-900 leading-tight mb-3">
-            Ask about Assam tourism
-          </h2>
-          <p className="text-stone-500 text-sm leading-relaxed">
-            Type in Assamese, English, or naturally mixed — covering 51 destinations
-            across Assam.
-          </p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
 
           {/* ── Chat panel ── */}
           <div className="flex-1 min-w-0 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col"
-               style={{ height: '600px' }}>
+               style={{ height: 'clamp(420px, calc(100vh - 180px), 680px)' }}>
 
             {/* Chat header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse-dot" />
                 <span className="text-sm font-medium text-stone-700">Tourism Chatbot</span>
-                <span className="text-xs text-stone-400 font-mono">44 intents · 51 destinations</span>
+                <span className="text-xs text-stone-400 font-mono hidden sm:inline">Assam Tourism · 44 intents · 51 destinations</span>
               </div>
               <button onClick={reset}
                       className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all"
@@ -206,7 +195,7 @@ export default function ChatSection() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            <div ref={msgsRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {messages.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center pb-4">
                   <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
@@ -253,7 +242,6 @@ export default function ChatSection() {
                   </div>
                 </div>
               )}
-              <div ref={bottomRef} />
             </div>
 
             {/* Input */}
@@ -341,12 +329,14 @@ export default function ChatSection() {
                   {debug.score !== undefined && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Semantic Match</p>
-                      <div className="flex items-center gap-2">
-                        <BarChart2 size={12} className="text-stone-400" />
-                        <code className="text-xs font-mono text-stone-700">
-                          {debug.score.toFixed(4)}
-                        </code>
-                        <ConfBadge level={debug.matchConf} />
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <BarChart2 size={12} className="text-stone-400" />
+                          <ConfBadge level={debug.matchConf} />
+                        </div>
+                        <span className="text-sm font-semibold text-stone-700 flex-shrink-0">
+                          {(debug.score * 100).toFixed(1)}%
+                        </span>
                       </div>
                       {/* Score bar */}
                       <div className="mt-2 h-1.5 bg-stone-100 rounded-full overflow-hidden">
