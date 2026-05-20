@@ -1,75 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import Groq from "groq-sdk";
 import { applyOverrides } from "@/lib/intentOverrides";
 
 const HF_SPACE_URL = process.env.HF_SPACE_URL ?? "https://rajk12-assamese-tourism-chatbot.hf.space";
 const TIMEOUT_MS   = 120_000;
-const GROQ_TIMEOUT = 15_000;
-
-const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-  : null;
-
-const SYSTEM_PROMPT =
-  "You are TourBot, a friendly tourism assistant specialising in Assam, India. " +
-  "A retrieval pipeline has already found the relevant factual answer. " +
-  "Your task: rewrite it in a natural, conversational, helpful tone. " +
-  "Rules — (1) keep every number, price, distance, and named detail exactly as given; " +
-  "(2) add no facts that are not in the retrieved answer; " +
-  "(3) be concise (2–4 sentences); " +
-  "(4) if the user wrote in Assamese or code-mixed language, reply in the same friendly mixed style; " +
-  "(5) never expose internal labels like 'Retrieved answer:' or 'Intent:'; " +
-  "(6) NEVER use bullet points, dashes, hyphens, or numbered lists — write only in plain flowing prose sentences; " +
-  "(7) NEVER use Bengali words — the language is Assamese, not Bengali; these words are forbidden: 'jemon', 'jonno', 'ache' — rephrase naturally without them instead of substituting a fixed replacement.";
 
 type Turn = { role: string; content: string };
 
-async function polish(
-  message:    string,
-  rawAnswer:  string,
-  debugMd:    string,
-  priorTurns: Turn[],
-): Promise<string> {
-  if (!groq || !rawAnswer) return rawAnswer;
+// ── Intent-aware noise filtering ───────────────────────────────────────────────
+// Each category lists regex patterns that match sentences to REMOVE.
+// Patterns are English-keyword-based so they work regardless of Assamese words.
+const NOISE: Record<string, RegExp[]> = {
+  hotel_accommodation: [
+    /Indians?\s*:\s*₹|Foreigners?\s*:\s*₹/,
+    /\bentry\b.{0,40}₹|₹.{0,40}\bentry fee\b/i,
+    /\b(jeep|elephant)\s+safari\b/i,
+    /\bsafari\b.{0,40}(₹|fee|cost|price|charge)/i,
+    /\bcamera\s*(charge|fee|₹)\b/i,
+    /\bvideo\s+camera\b/i,
+    /\bstill\s+camera\b/i,
+  ],
+  entry_fee: [
+    /\b(hotel|resort|lodge|stay|accommodation|guest\s*house|hostel)\b/i,
+    /\b(jeep|elephant)\s+safari\b/i,
+    /\bcamera\s*(charge|fee)\b/i,
+    /\b(restaurant|cafe|food|dining)\b/i,
+  ],
+  safari: [
+    /\b(hotel|resort|lodge|stay|accommodation|guest\s*house|hostel)\b/i,
+    /Indians?\s*:\s*₹|Foreigners?\s*:\s*₹/,
+    /\bentry\b.{0,40}₹/i,
+    /\bcamera\s*(charge|fee|₹)\b/i,
+    /\b(restaurant|cafe|food|dining)\b/i,
+  ],
+  food_restaurant: [
+    /\b(hotel|resort|lodge|stay|accommodation|guest\s*house|hostel)\b/i,
+    /Indians?\s*:\s*₹|Foreigners?\s*:\s*₹/,
+    /\b(jeep|elephant)\s+safari\b/i,
+    /\bcamera\s*(charge|fee)\b/i,
+  ],
+  transport: [
+    /\b(hotel|resort|lodge|stay|accommodation|guest\s*house|hostel)\b/i,
+    /Indians?\s*:\s*₹|Foreigners?\s*:\s*₹/,
+    /\bcamera\s*(charge|fee)\b/i,
+    /\b(jeep|elephant)\s+safari\b/i,
+  ],
+};
 
-  const intentMatch = debugMd.match(/\*\*Intent:\*\*[^\n]*?`([^`]+)`/);
-  const destMatch   = debugMd.match(/\*\*Destination:\*\*\s*([^\n*]+)/);
-  const ctx = [
-    intentMatch?.[1] ? `Intent: ${intentMatch[1].trim()}`    : "",
-    destMatch?.[1]   ? `Destination: ${destMatch[1].trim()}` : "",
-  ].filter(Boolean).join("\n");
-
-  const userPrompt =
-    `User query: "${message}"\n` +
-    (ctx ? `${ctx}\n` : "") +
-    `\nRetrieved answer:\n${rawAnswer}\n\nRewrite this naturally.`;
-
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), GROQ_TIMEOUT);
-
-  try {
-    const completion = await groq.chat.completions.create(
-      {
-        model:       "llama-3.3-70b-versatile",
-        temperature: 0.4,
-        max_tokens:  350,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...priorTurns.slice(-6).map(t => ({
-            role:    t.role as "user" | "assistant",
-            content: t.content,
-          })),
-          { role: "user", content: userPrompt },
-        ],
-      },
-      { signal: abort.signal },
-    );
-    return completion.choices[0]?.message?.content?.trim() || rawAnswer;
-  } finally {
-    clearTimeout(timer);
-  }
+function getCategory(intent: string): string | null {
+  const i = intent.toLowerCase();
+  if (/hotel|stay|accommodation|lodge|resort|room|night|sleep/.test(i)) return "hotel_accommodation";
+  if (/entry|ticket|fee|pass|permit|admission/.test(i))                 return "entry_fee";
+  if (/safari|jeep|elephant/.test(i))                                   return "safari";
+  if (/food|restaurant|eat|dining|cuisine|meal/.test(i))                return "food_restaurant";
+  if (/transport|bus|train|flight|reach|distance|travel|route/.test(i)) return "transport";
+  return null;
 }
 
+function filterByIntent(rawAnswer: string, intent: string): string {
+  const category = getCategory(intent);
+  if (!category) return rawAnswer;
+
+  const patterns = NOISE[category];
+  const sentences = rawAnswer.split(/(?<=\.)\s+|\n+/).filter(Boolean);
+  const kept = sentences.filter(s => !patterns.some(p => p.test(s)));
+  const result = kept.join(" ").trim();
+  return result || rawAnswer; // fall back to raw if everything was removed
+}
+
+// ── Route handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const { message, history } = await req.json();
@@ -115,26 +113,16 @@ export async function POST(req: NextRequest) {
       const rawAnswer =
         [...newHistory].reverse().find(m => m.role === "assistant")?.content ?? "";
 
-      // Polish with Groq; silently fall back to raw on any failure
-      let polished = rawAnswer;
-      if (groq && rawAnswer) {
-        try {
-          polished = await polish(
-            message,
-            rawAnswer,
-            data.debug ?? "",
-            newHistory.slice(0, -2), // prior turns only, excluding current exchange
-          );
-        } catch (e) {
-          console.warn("Groq polish failed, using raw answer:", e);
-        }
-      }
+      // Filter out unrelated sentences based on detected intent
+      const intentMatch = (data.debug ?? "").match(/\*\*Intent:\*\*[^\n]*?`([^`]+)`/);
+      const intent      = intentMatch?.[1]?.trim() ?? "";
+      const filtered    = filterByIntent(rawAnswer, intent);
 
-      // Replace last assistant turn in history with polished text
+      // Replace last assistant turn with filtered answer
       const outHistory = [...newHistory];
-      const lastIdx = outHistory.map(t => t.role).lastIndexOf("assistant");
-      if (lastIdx !== -1 && polished !== rawAnswer) {
-        outHistory[lastIdx] = { role: "assistant", content: polished };
+      const lastIdx    = outHistory.map(t => t.role).lastIndexOf("assistant");
+      if (lastIdx !== -1 && filtered !== rawAnswer) {
+        outHistory[lastIdx] = { role: "assistant", content: filtered };
       }
 
       const debugOut = fired && overriddenIntent

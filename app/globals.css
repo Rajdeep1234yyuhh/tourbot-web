@@ -19,3 +19,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+textarea::placeholder {
+  color: #a8a29e;
+  -webkit-text-fill-color: #a8a29e;
+  opacity: 1;
+}

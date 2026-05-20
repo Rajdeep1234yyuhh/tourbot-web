@@ -254,7 +254,8 @@ export default function ChatSection() {
                           onKeyDown={handleKey}
                           placeholder="e.g. Kaziranga t hotel r daam kiman?"
                           rows={1}
-                          className="flex-1 bg-transparent resize-none text-sm text-stone-800
+                          style={{ color: '#1c1917', WebkitTextFillColor: '#1c1917' }}
+                          className="flex-1 bg-stone-50 resize-none text-sm
                                      placeholder:text-stone-400 outline-none font-body
                                      max-h-32 overflow-y-auto" />
                 <button onClick={() => sendMessage(input)}
