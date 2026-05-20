@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:       #fafaf9;
+  --surface:  #ffffff;
+  --border:   #e7e5e4;
+  --text:     #1c1917;
+  --muted:    #78716c;
+  --accent:   #d97706;
+  --accent-l: #fef3c7;
+  --teal:     #0d9488;
+  --teal-l:   #ccfbf1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* Prose inside debug markdown */
+.debug-prose p       { margin: 0 0 6px; font-size: 0.82rem; }
+.debug-prose strong  { color: var(--teal); font-weight: 600; }
+.debug-prose em      { color: var(--muted); font-style: italic; }
+.debug-prose code    {
+  background: var(--teal-l);
+  color: var(--teal);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.debug-prose ul      { margin: 4px 0; padding-left: 14px; }
+.debug-prose ul li   { font-size: 0.82rem; margin-bottom: 2px; color: var(--muted); }
+
+/* Typing dots animation */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+.typing-dot:nth-child(1) { animation: bounce 1s ease-in-out 0s   infinite; }
+.typing-dot:nth-child(2) { animation: bounce 1s ease-in-out 0.15s infinite; }
+.typing-dot:nth-child(3) { animation: bounce 1s ease-in-out 0.3s  infinite; }
+
+/* Chat message entrance */
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-enter { animation: msgIn 0.25s ease forwards; }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); const keys = Object.keys\\(l\\).filter\\(k => k.toLowerCase\\(\\).includes\\('github'\\) || k.toLowerCase\\(\\).includes\\('git'\\)\\); console.log\\(keys\\)\")",
+      "Bash(node -e ' *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); cd \"d:\\\\Assamese- English Chatbot\\\\SOURCE\\\\Chatbot 2\\\\chatbotv2\"; git remote remove origin; git remote add origin https://github.com/Rajdeep1234yyuhh/tourbot-web.git; git remote -v)"
+    ]
+  }
+}
