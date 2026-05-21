@@ -85,6 +85,28 @@ export const INTENT_OVERRIDES: OverrideRule[] = [
     intent: 'duration_stay_general',
     prefix: 'How many days to stay: ',
   },
+  {
+    pattern: new RegExp(
+      [
+        'best\\s+time\\s+(to\\s+)?(visit|jab|go|tour)',
+        'jabar\\s+best\\s+time',
+        'visit\\s+korar\\s+best\\s+time',
+        'kune\\s+(season|time|maah|month)',
+        'kuin\\s+(season|time|maah|month)',
+        'season\\s+kune',
+        'khotia\\s+(jabo|visit|jab|jaboa)',
+        'kuin\\s+time\\s+(te\\s+)?jabo',
+        'kune\\s+time\\s+(te\\s+)?jabo',
+        'kune\\s+mahot\\s+jabo',
+        'kuin\\s+mahot\\s+jabo',
+        'weather\\s+keman',
+        'climate\\s+kemon',
+      ].join('|'),
+      'i'
+    ),
+    intent: 'best_time_visit',
+    prefix: 'Best month season and weather to visit: ',
+  },
 ]
 
 export interface OverrideResult {
