@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import Groq from "groq-sdk";
 import { applyOverrides } from "@/lib/intentOverrides";
 
 const HF_SPACE_URL = process.env.HF_SPACE_URL ?? "https://rajk12-assamese-tourism-chatbot.hf.space";
 const TIMEOUT_MS   = 120_000;
+const GROQ_TIMEOUT = 10_000;
+
+const groq = process.env.GROQ_API_KEY
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+  : null;
 
 type Turn = { role: string; content: string };
 
 // ── Intent-aware noise filtering ───────────────────────────────────────────────
-// Each category lists regex patterns that match sentences to REMOVE.
-// Patterns are English-keyword-based so they work regardless of Assamese words.
 const NOISE: Record<string, RegExp[]> = {
   hotel_accommodation: [
     /Indians?\s*:\s*₹|Foreigners?\s*:\s*₹/,
@@ -59,12 +63,118 @@ function getCategory(intent: string): string | null {
 function filterByIntent(rawAnswer: string, intent: string): string {
   const category = getCategory(intent);
   if (!category) return rawAnswer;
-
-  const patterns = NOISE[category];
+  const patterns  = NOISE[category];
   const sentences = rawAnswer.split(/(?<=\.)\s+|\n+/).filter(Boolean);
-  const kept = sentences.filter(s => !patterns.some(p => p.test(s)));
-  const result = kept.join(" ").trim();
-  return result || rawAnswer; // fall back to raw if everything was removed
+  const kept      = sentences.filter(s => !patterns.some(p => p.test(s)));
+  return kept.join(" ").trim() || rawAnswer;
+}
+
+// ── LLM: remove formatting dashes, add minimal connecting intro ────────────────
+async function cleanAnswer(answer: string): Promise<string> {
+  if (!groq || !answer) return answer;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), GROQ_TIMEOUT);
+  try {
+    const completion = await groq.chat.completions.create(
+      {
+        model:       "llama-3.3-70b-versatile",
+        temperature: 0,
+        max_tokens:  350,
+        messages: [{
+          role:    "system",
+          content:
+            "You clean up Assam tourism answer text. Rules: " +
+            "(1) Remove ONLY the 'DestinationName t —' segment (destination + 't' + em-dash) wherever it appears — for example remove 'Tezpur t —' or 'Kaziranga t —'; but if there is a meaningful topic word before it like 'Crowd info —' or 'Cost details —', KEEP that topic word and only remove the destination part; " +
+            "(2) Remove standalone em-dashes '—' used only as separators — but KEEP regular hyphens inside data ranges like '15-28°C', 'October-March', '₹1000-2000', 'Jun-Sep'; " +
+            "(3) You may add up to 5 natural words at the start to make the answer begin smoothly but do NOT add any new facts; " +
+            "(4) Do NOT change any number, price, date, place name, or factual detail; " +
+            "(5) Do NOT use Bengali words — forbidden: 'jemon', 'jonno', 'ache', 'theke'; " +
+            "(6) Return only the cleaned answer text, nothing else.",
+        }, {
+          role:    "user",
+          content: answer,
+        }],
+      },
+      { signal: abort.signal },
+    );
+    return completion.choices[0]?.message?.content?.trim() || answer;
+  } catch {
+    return answer;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ── Fuzzy destination detection ────────────────────────────────────────────────
+// All 51 known destinations in the dataset
+const KNOWN_DESTINATIONS = [
+  "Kaziranga", "Majuli", "Kamakhya", "Guwahati", "Tezpur", "Haflong",
+  "Sivasagar", "Dibru-Saikhowa", "Jorhat", "Dibrugarh", "Nagaon", "Manas",
+  "Barpeta", "Dhubri", "Goalpara", "Golaghat", "Lakhimpur", "Dhemaji",
+  "Nalbari", "Biswanath", "Bokakhat", "Nameri", "Pobitora", "Orang",
+  "Diphu", "Hajo", "Sualkuchi", "Hailakandi", "Karimganj", "Silchar",
+  "Lumding", "Tinsukia", "Sadiya", "Sibsagar", "Charaideo", "Hojai",
+  "Morigaon", "Sonitpur", "Karbi Anglong", "Dima Hasao", "Cachar",
+  "Bongaigaon", "Chirang", "Baksa", "Kokrajhar", "Dhuburi", "Darrang",
+  "Udalguri", "Tamulpur", "Bajali", "Kamrup",
+];
+
+// Bigram Jaccard similarity — handles typos well
+function bigrams(s: string): Set<string> {
+  const bg = new Set<string>();
+  for (let i = 0; i < s.length - 1; i++) bg.add(s.slice(i, i + 2));
+  return bg;
+}
+
+function jaccardSim(a: Set<string>, b: Set<string>): number {
+  const intersection = [...a].filter(x => b.has(x)).length;
+  const union        = new Set([...a, ...b]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+// Assamese locative/genitive suffixes that get merged onto place names
+const ASSAMESE_SUFFIXES = /(?:or|ot|te?)$/i;
+
+function fuzzyDetectDestination(query: string): string | null {
+  const tokens = query.toLowerCase().replace(/[?!,।]/g, " ").split(/\s+/).filter(Boolean);
+
+  let best: string | null = null;
+  let bestScore = 0;
+
+  for (const rawToken of tokens) {
+    // Try with and without common Assamese suffixes
+    const variants = [rawToken, rawToken.replace(ASSAMESE_SUFFIXES, "")];
+
+    for (const token of variants) {
+      if (token.length < 3) continue;
+      const tokenBg = bigrams(token);
+
+      for (const dest of KNOWN_DESTINATIONS) {
+        const score = jaccardSim(tokenBg, bigrams(dest.toLowerCase()));
+        if (score > bestScore) {
+          bestScore = score;
+          best      = dest;
+        }
+      }
+    }
+  }
+
+  // 0.45 threshold: high enough to avoid false positives, lenient enough for typos
+  return bestScore >= 0.45 ? best : null;
+}
+
+// ── HF Space call ──────────────────────────────────────────────────────────────
+async function callHF(
+  query:   string,
+  history: Turn[],
+  signal:  AbortSignal,
+): Promise<Response> {
+  return fetch(`${HF_SPACE_URL}/predict`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    signal,
+    body:    JSON.stringify({ message: query, history }),
+  });
 }
 
 // ── Route handler ──────────────────────────────────────────────────────────────
@@ -82,26 +192,36 @@ export async function POST(req: NextRequest) {
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
 
     try {
-      const res = await fetch(`${HF_SPACE_URL}/predict`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        signal:  abort.signal,
-        body:    JSON.stringify({ message: forwardQuery, history: history ?? [] }),
-      });
+      let res = await callHF(forwardQuery, history ?? [], abort.signal);
 
       if (!res.ok) {
-        const text = await res.text();
-        console.error("HF Space error:", text);
+        console.error("HF Space error:", await res.text());
         return NextResponse.json(
           { error: "HF Space unavailable. Please try again." },
           { status: 502 },
         );
       }
 
-      const data = await res.json();
+      let data = await res.json();
 
       if (data.error) {
         return NextResponse.json({ error: data.error }, { status: 503 });
+      }
+
+      // ── Destination detection fallback ───────────────────────────────────────
+      // When the backend couldn't detect a destination via keyword matching,
+      // try LLM extraction and retry the HF call with the destination prepended.
+      const isNoDestination = (data.debug ?? "").includes("`no_destination`");
+      if (isNoDestination) {
+        const llmDest = fuzzyDetectDestination(message);
+        if (llmDest) {
+          const retryQuery = `${llmDest}: ${forwardQuery}`;
+          const retryRes   = await callHF(retryQuery, history ?? [], abort.signal);
+          if (retryRes.ok) {
+            const retryData = await retryRes.json();
+            if (!retryData.error) data = retryData;
+          }
+        }
       }
 
       // Restore original message in history if a prefix was added
@@ -113,16 +233,17 @@ export async function POST(req: NextRequest) {
       const rawAnswer =
         [...newHistory].reverse().find(m => m.role === "assistant")?.content ?? "";
 
-      // Filter out unrelated sentences based on detected intent
+      // Filter irrelevant sentences then clean formatting
       const intentMatch = (data.debug ?? "").match(/\*\*Intent:\*\*[^\n]*?`([^`]+)`/);
       const intent      = intentMatch?.[1]?.trim() ?? "";
       const filtered    = filterByIntent(rawAnswer, intent);
+      const cleaned     = await cleanAnswer(filtered);
 
-      // Replace last assistant turn with filtered answer
+      // Replace last assistant turn with cleaned answer
       const outHistory = [...newHistory];
       const lastIdx    = outHistory.map(t => t.role).lastIndexOf("assistant");
-      if (lastIdx !== -1 && filtered !== rawAnswer) {
-        outHistory[lastIdx] = { role: "assistant", content: filtered };
+      if (lastIdx !== -1 && cleaned !== rawAnswer) {
+        outHistory[lastIdx] = { role: "assistant", content: cleaned };
       }
 
       const debugOut = fired && overriddenIntent

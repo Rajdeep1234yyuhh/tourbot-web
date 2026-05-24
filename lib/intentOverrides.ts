@@ -8,6 +8,52 @@ export const INTENT_OVERRIDES: OverrideRule[] = [
   {
     pattern: new RegExp(
       [
+        'budget\\s+stay',
+        'budget\\s+hotel',
+        'budget\\s+option',
+        'budget\\s+accommodation',
+        'low\\s+budget',
+        'cheap\\s+stay',
+        'cheap\\s+hotel',
+        'affordable\\s+stay',
+        'kam\\s+daam.*stay',
+        'kam\\s+daam.*hotel',
+        'sosta.*stay',
+        'sosta.*hotel',
+        'sosta.*thakibo',
+        'thakibor.*sosta',
+      ].join('|'),
+      'i'
+    ),
+    intent: 'hotel_price',
+    prefix: 'Low budget and affordable accommodation options: ',
+  },
+  {
+    pattern: new RegExp(
+      [
+        'best\\s+time\\s+ki',
+        'best\\s+time\\s+kun',
+        'kune\\s+samay\\s+jab',
+        'kune\\s+mah\\s+t\\s+jab',
+        'kobe\\s+jab',
+        'jabor\\s+best\\s+time',
+        'best\\s+season',
+        'kune\\s+season',
+        'kune\\s+month',
+        'kun\\s+mah\\s+jab',
+        'kune\\s+time\\s+jab',
+        'jabor\\s+sothik\\s+time',
+        'visit\\s+korar\\s+best\\s+time',
+        'jabole\\s+kune\\s+samay',
+      ].join('|'),
+      'i'
+    ),
+    intent: 'best_time_visit',
+    prefix: 'Best month, season, and weather to visit: ',
+  },
+  {
+    pattern: new RegExp(
+      [
         'jab[oa]l?[oi]?\\s+kiman\\s+time',
         'kiman\\s+time\\s+lag[ie]',
         'kiman\\s+ghanta\\s+lag',

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { GitBranch, ExternalLink, Layers } from 'lucide-react'
+import { GitBranch, ExternalLink } from 'lucide-react'
 
 export default function Header() {
   return (
@@ -33,13 +33,7 @@ export default function Header() {
 
         {/* Links */}
         <div className="flex items-center gap-3">
-          <Link href="/how-it-works"
-                className="flex items-center gap-1.5 text-xs font-medium bg-stone-50 text-stone-600
-                           border border-stone-200 px-3 py-1.5 rounded-full hover:bg-stone-100 transition-colors">
-            <Layers size={12} />
-            How it works
-          </Link>
-          <a href="https://github.com/rajdeepkotoky"
+<a href="https://github.com/rajdeepkotoky"
              target="_blank" rel="noopener noreferrer"
              className="p-2 text-stone-400 hover:text-stone-700 transition-colors">
             <GitBranch size={18} />

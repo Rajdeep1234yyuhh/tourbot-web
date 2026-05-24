@@ -1,28 +1,21 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, RotateCcw, Cpu, MapPin, BarChart2, Zap, Sparkles, Database } from 'lucide-react'
+import {
+  Send, RotateCcw, Cpu, MapPin, Zap, Sparkles, Database,
+  ExternalLink, GitBranch, ChevronDown, ChevronUp,
+} from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-}
-
+interface Message { role: 'user' | 'assistant'; content: string }
 interface DebugInfo {
-  intent?:      string
-  confidence?:  number
-  destination?: string
-  score?:       number
-  matchConf?:   string
-  matchedQ?:    string
-  method?:      string
-  alts?:        { intent: string; confidence: number }[]
-  raw?:         string
-  override?:    string
+  intent?: string; confidence?: number; destination?: string
+  matchConf?: string; matchedQ?: string; method?: string
+  alts?: { intent: string; confidence: number }[]
+  raw?: string; override?: string
 }
 
-// ── Examples ──────────────────────────────────────────────────────────────────
+// ── Static data ───────────────────────────────────────────────────────────────
 const EXAMPLES = [
   'Kaziranga t hotel r daam kiman?',
   'Majuli jabor fastest way ki?',
@@ -30,36 +23,67 @@ const EXAMPLES = [
   'Manas National Park t wildlife ki ase?',
   'Haflong t best time ki jaboloi?',
   'Guwahati t budget stay r option ki ase?',
+  'Tezpur famous kio eman, ki pai khabole?',
 ]
 
-// ── Parse debug markdown into structured data ─────────────────────────────────
+const DESTINATIONS = [
+  'Kaziranga','Majuli','Kamakhya','Guwahati','Tezpur','Haflong',
+  'Sivasagar','Dibru-Saikhowa','Jorhat','Dibrugarh','Nagaon','Manas',
+  'Barpeta','Dhubri','Goalpara','Golaghat','Lakhimpur','Dhemaji',
+  'Nalbari','Biswanath','Bokakhat','Nameri','Pobitora','Orang',
+  'Diphu','Hajo','Sualkuchi','Hailakandi','Karimganj','Silchar',
+  'Lumding','Tinsukia','Sadiya','Sibsagar','Charaideo','Hojai',
+  'Morigaon','Sonitpur','Karbi Anglong','Dima Hasao','Cachar',
+  'Bongaigaon','Chirang','Baksa','Kokrajhar','Darrang',
+  'Udalguri','Tamulpur','Bajali','Kamrup','Dhuburi',
+]
+
+const INTENTS = [
+  'hotel_price','best_time_visit','best_time_visit_weather','best_time_visit_festival',
+  'best_time_visit_less_crowd','entry_fee','jeep_safari','elephant_safari',
+  'safari_booking','wildlife_info','duration_stay_general','duration_stay_specific',
+  'reach_distance_time','transport_local','bus_train_info','flight_info',
+  'food_vegetarian','food_local_cuisine','food_restaurant','famous_for',
+  'speciality','activities_general','trekking_hiking','boating_river',
+  'temple_religious','shopping','permits_required','guide_service',
+  'photography_spots','family_travel','budget_travel','luxury_stay',
+  'tips_advice','precaution_carry_things','medical_emergency',
+  'festival_events','nearby_attractions','day_trip','camping',
+  'crowd_info','weather_general','national_park_info','heritage_site',
+  'cultural_info',
+]
+
+const RESOURCES = [
+  { label: 'Intent Classifier', path: 'rajk12/assamese-tourism-intent-classifier',  href: 'https://huggingface.co/rajk12/assamese-tourism-intent-classifier',           badge: 'Model'   },
+  { label: 'Sentence Encoder',  path: 'rajk12/assamese-tourism-sentence-encoder',    href: 'https://huggingface.co/rajk12/assamese-tourism-sentence-encoder',             badge: 'Model'   },
+  { label: 'Q&A Dataset',       path: 'rajk12/assamese-tourism-qa-bank',             href: 'https://huggingface.co/datasets/rajk12/assamese-tourism-qa-bank',             badge: 'Dataset' },
+  { label: 'HF Space',          path: 'spaces/rajk12/assamese-tourism-chatbot',      href: 'https://huggingface.co/spaces/rajk12/assamese-tourism-chatbot',               badge: 'Space'   },
+  { label: 'GitHub',            path: 'rajdeepkotoky',                               href: 'https://github.com/rajdeepkotoky',                                            badge: 'Code'    },
+]
+
+
+// ── Debug parser ──────────────────────────────────────────────────────────────
 function parseDebug(md: string): DebugInfo {
   if (!md) return {}
   const get = (label: string) => {
-    const m = md.match(new RegExp("\\*\\*" + label + ":\\*\\*[^\\n]*?`([^`]+)`"))
+    const m = md.match(new RegExp('\\*\\*' + label + ':\\*\\*[^\\n]*?`([^`]+)`'))
     return m?.[1]?.trim()
   }
   const getAfter = (label: string) => {
     const m = md.match(new RegExp(`\\*\\*${label}:\\*\\*\\s*([^\\n*]+)`))
     return m?.[1]?.trim()
   }
-  const confMatch  = md.match(/— ([\d.]+)%/)
-  const scoreMatch = md.match(/Score:\s*`([\d.]+)`/)
+  const confMatch = md.match(/— ([\d.]+)%/)
   const confLMatch = md.match(/\((high|medium|low)\)/)
-
   const alts: { intent: string; confidence: number }[] = []
-  const altMatches = [...md.matchAll(/- `([^`]+)` \(([\d.]+)%\)/g)]
-  for (const m of altMatches) {
+  for (const m of [...md.matchAll(/- `([^`]+)` \(([\d.]+)%\)/g)])
     alts.push({ intent: m[1], confidence: parseFloat(m[2]) / 100 })
-  }
-
   return {
     intent:      get('Intent'),
-    confidence:  confMatch  ? parseFloat(confMatch[1]) / 100 : undefined,
+    confidence:  confMatch   ? parseFloat(confMatch[1]) / 100 : undefined,
     destination: getAfter('Destination'),
-    score:       scoreMatch ? parseFloat(scoreMatch[1])       : undefined,
-    matchConf:   confLMatch ? confLMatch[1]                   : undefined,
-    matchedQ:    getAfter('Matched Q')?.replace(/^\*|\*$/g, ''),
+    matchConf:   confLMatch  ? confLMatch[1]                  : undefined,
+    matchedQ:    md.match(/\*\*Matched Q:\*\*\s*\*?([^*\n]+)/)?.[1]?.trim(),
     method:      getAfter('Routing'),
     alts,
     raw: md,
@@ -67,85 +91,88 @@ function parseDebug(md: string): DebugInfo {
   }
 }
 
-// ── Conf badge ────────────────────────────────────────────────────────────────
-function ConfBadge({ level }: { level?: string }) {
-  const map: Record<string, string> = {
-    high:   'bg-teal-50 text-teal-700 border-teal-200',
-    medium: 'bg-amber-50 text-amber-700 border-amber-200',
-    low:    'bg-red-50 text-red-600 border-red-200',
-  }
-  if (!level) return null
-  return (
-    <span className={`text-xs font-mono px-1.5 py-0.5 rounded border font-medium ${map[level] ?? 'bg-stone-100 text-stone-500 border-stone-200'}`}>
-      {level}
-    </span>
-  )
-}
-
-// ── Typing indicator ──────────────────────────────────────────────────────────
+// ── Typing dots ───────────────────────────────────────────────────────────────
 function TypingDots() {
   return (
     <div className="flex items-center gap-1 px-4 py-3">
-      {[0,1,2].map(i => (
-        <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-stone-300 block" />
-      ))}
+      {[0,1,2].map(i => <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-stone-300 block" />)}
     </div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function ChatSection() {
-  const [messages,   setMessages]   = useState<Message[]>([])
-  const [input,      setInput]      = useState('')
-  const [loading,    setLoading]    = useState(false)
-  const [debug,      setDebug]      = useState<DebugInfo>({})
-  const [rawAnswer,  setRawAnswer]  = useState<string>('')
-  const [hfHistory,  setHfHistory]  = useState<{role:string;content:string}[]>([])
+// ── Expand toggle ─────────────────────────────────────────────────────────────
+function Expandable({ label, count, items, color }: { label: string; count: number; items: string[]; color: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border border-stone-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-stone-50 hover:bg-stone-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${color}`}>{count}</span>
+          <span className="text-xs font-semibold text-stone-700">{label}</span>
+        </div>
+        {open ? <ChevronUp size={13} className="text-stone-400" /> : <ChevronDown size={13} className="text-stone-400" />}
+      </button>
+      {open && (
+        <div className="px-3 py-2 flex flex-wrap gap-1.5 max-h-48 overflow-y-auto bg-white">
+          {items.map(item => (
+            <span key={item} className="text-xs font-mono bg-stone-50 border border-stone-200 text-stone-600 px-2 py-0.5 rounded-full">
+              {item}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-  const msgsRef  = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function ChatSection() {
+  const [messages,  setMessages]  = useState<Message[]>([])
+  const [input,     setInput]     = useState('')
+  const [loading,   setLoading]   = useState(false)
+  const [debug,     setDebug]     = useState<DebugInfo>({})
+  const [rawAnswer, setRawAnswer] = useState('')
+  const [hfHistory, setHfHistory] = useState<{role:string;content:string}[]>([])
+  const [tab,       setTab]       = useState<'debug'|'resources'|'info'>('info')
+
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef  = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (messages.length > 0 || loading) {
-      const el = msgsRef.current
-      if (el) el.scrollTop = el.scrollHeight
-    }
+    if (messages.length > 0 || loading)
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
   const sendMessage = useCallback(async (text: string) => {
     const msg = text.trim()
     if (!msg || loading) return
-
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: msg }])
     setLoading(true)
-
     try {
-      const res = await fetch('/api/chat', {
+      const res  = await fetch('/api/chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ message: msg, history: hfHistory }),
       })
       const data = await res.json()
-
       if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.error }])
       } else {
-        // Extract the latest assistant message (messages format: {role, content})
         const newHistory: {role:string;content:string}[] = data.history ?? []
         const lastMsg = [...newHistory].reverse().find(m => m.role === 'assistant')
         const answer  = lastMsg?.content ?? 'No response.'
-
         setHfHistory(newHistory)
         setMessages(prev => [...prev, { role: 'assistant', content: answer }])
         setDebug(parseDebug(data.debug ?? ''))
         setRawAnswer(data.rawAnswer ?? '')
+        setTab('debug')
       }
     } catch {
-      setMessages(prev => [...prev, {
-        role:    'assistant',
-        content: 'Could not reach the server. Please try again.',
-      }])
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Could not reach the server. Please try again.' }])
     } finally {
       setLoading(false)
       inputRef.current?.focus()
@@ -153,169 +180,136 @@ export default function ChatSection() {
   }, [loading, hfHistory])
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage(input)
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) }
   }
 
   const reset = () => {
-    setMessages([])
-    setHfHistory([])
-    setDebug({})
-    setRawAnswer('')
-    setInput('')
-    inputRef.current?.focus()
+    setMessages([]); setHfHistory([]); setDebug({}); setRawAnswer(''); setInput('')
+    setTab('info'); inputRef.current?.focus()
   }
 
   const hasDebug = !!debug.intent
 
   return (
-    <section id="chat" className="py-4 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-64px)] p-4 max-w-[1400px] mx-auto">
 
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
+      {/* ── Chat panel ── */}
+      <div className="flex-1 min-w-0 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col">
 
-          {/* ── Chat panel ── */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col"
-               style={{ height: 'clamp(420px, calc(100vh - 180px), 680px)' }}>
+        {/* Chat header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-100">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse-dot" />
+            <span className="text-sm font-semibold text-stone-800">TourBot</span>
+            <span className="text-xs text-stone-400 font-mono hidden sm:inline">Assam Tourism Assistant</span>
+          </div>
+          <button onClick={reset} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all" title="Clear chat">
+            <RotateCcw size={14} />
+          </button>
+        </div>
 
-            {/* Chat header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse-dot" />
-                <span className="text-sm font-medium text-stone-700">Tourism Chatbot</span>
-                <span className="text-xs text-stone-400 font-mono hidden sm:inline">Assam Tourism · 44 intents · 51 destinations</span>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="h-full flex flex-col items-center justify-center text-center pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
+                <span className="text-2xl">🏔️</span>
               </div>
-              <button onClick={reset}
-                      className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all"
-                      title="Clear chat">
-                <RotateCcw size={14} />
+              <p className="text-stone-600 text-sm font-semibold mb-1">Ask anything about Assam tourism</p>
+              <p className="text-stone-400 text-xs mb-6">in Assamese, English, or code-mixed</p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                {EXAMPLES.map(ex => (
+                  <button key={ex} onClick={() => sendMessage(ex)}
+                    className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-3 py-1.5 rounded-full hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all font-mono">
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div key={i} className={`msg-enter flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed
+                ${msg.role === 'user'
+                  ? 'bg-stone-900 text-white rounded-br-md'
+                  : 'bg-stone-50 border border-stone-200 text-stone-800 rounded-bl-md'}`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-stone-50 border border-stone-200 rounded-2xl rounded-bl-md">
+                <TypingDots />
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div className="border-t border-stone-100 px-4 py-3">
+          <div className="flex items-end gap-3 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all">
+            <textarea ref={inputRef} value={input}
+              onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
+              placeholder="e.g. Kaziranga t hotel r daam kiman?"
+              rows={1}
+              style={{ color: '#1c1917', WebkitTextFillColor: '#1c1917' }}
+              className="flex-1 bg-stone-50 resize-none text-sm placeholder:text-stone-400 outline-none font-body max-h-32 overflow-y-auto" />
+            <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
+              className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center transition-all hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed">
+              <Send size={14} />
+            </button>
+          </div>
+          <p className="text-xs text-stone-400 mt-1.5 text-center">
+            Press <kbd className="font-mono bg-stone-100 px-1 rounded text-stone-500">Enter</kbd> to send
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right panel ── */}
+      <div className="w-full lg:w-80 xl:w-88 flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
+
+        {/* Tab bar */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="flex border-b border-stone-100">
+            {(['debug','resources','info'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors
+                  ${tab === t ? 'text-amber-700 bg-amber-50 border-b-2 border-amber-500' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'}`}>
+                {t}
               </button>
-            </div>
-
-            {/* Messages */}
-            <div ref={msgsRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {messages.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center pb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
-                    <span className="text-2xl">🏔️</span>
-                  </div>
-                  <p className="text-stone-500 text-sm mb-1 font-medium">
-                    Ask anything about Assam tourism
-                  </p>
-                  <p className="text-stone-400 text-xs mb-6">
-                    in Assamese, English, or code-mixed
-                  </p>
-                  {/* Example pills */}
-                  <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-                    {EXAMPLES.map(ex => (
-                      <button key={ex}
-                              onClick={() => sendMessage(ex)}
-                              className="text-xs bg-stone-50 border border-stone-200 text-stone-600
-                                         px-3 py-1.5 rounded-full hover:bg-amber-50 hover:border-amber-200
-                                         hover:text-amber-700 transition-all font-mono">
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {messages.map((msg, i) => (
-                <div key={i}
-                     className={`msg-enter flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed
-                    ${msg.role === 'user'
-                      ? 'bg-stone-900 text-white rounded-br-md'
-                      : 'bg-stone-50 border border-stone-200 text-stone-800 rounded-bl-md'
-                    }`}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-stone-50 border border-stone-200 rounded-2xl rounded-bl-md">
-                    <TypingDots />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input */}
-            <div className="border-t border-stone-100 px-4 py-4">
-              <div className="flex items-end gap-3 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3
-                              focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all">
-                <textarea ref={inputRef}
-                          value={input}
-                          onChange={e => setInput(e.target.value)}
-                          onKeyDown={handleKey}
-                          placeholder="e.g. Kaziranga t hotel r daam kiman?"
-                          rows={1}
-                          style={{ color: '#1c1917', WebkitTextFillColor: '#1c1917' }}
-                          className="flex-1 bg-stone-50 resize-none text-sm
-                                     placeholder:text-stone-400 outline-none font-body
-                                     max-h-32 overflow-y-auto" />
-                <button onClick={() => sendMessage(input)}
-                        disabled={!input.trim() || loading}
-                        className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-500 text-white
-                                   flex items-center justify-center transition-all
-                                   hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Send size={14} />
-                </button>
-              </div>
-              <p className="text-xs text-stone-400 mt-2 text-center">
-                Press <kbd className="font-mono bg-stone-100 px-1 rounded text-stone-500">Enter</kbd> to send
-              </p>
-            </div>
+            ))}
           </div>
 
-          {/* ── Debug panel ── */}
-          <div className="w-full lg:w-80 flex-shrink-0 space-y-3">
-
-            {/* Pipeline debug */}
-            <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-2">
-                <Cpu size={14} className="text-teal-600" />
-                <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">
-                  Pipeline Debug
-                </span>
+          {/* ── Debug tab ── */}
+          {tab === 'debug' && (
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Cpu size={13} className="text-teal-600" />
+                <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">Pipeline Debug</span>
               </div>
-
               {hasDebug ? (
-                <div className="px-4 py-4 space-y-3">
-
-                  {/* Intent */}
-                  {debug.intent && (
+                <div className="space-y-3">
+                  {(debug.intent || debug.override) && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Intent</p>
                       <div className="flex items-center justify-between gap-2">
                         <code className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded font-mono flex-1 truncate">
-                          {debug.intent}
+                          {debug.override ?? debug.intent}
                         </code>
                         {debug.confidence !== undefined && (
-                          <span className="text-xs font-semibold text-stone-600 flex-shrink-0">
-                            {(debug.confidence * 100).toFixed(1)}%
-                          </span>
+                          <span className="text-xs font-semibold text-stone-600 flex-shrink-0">{(debug.confidence * 100).toFixed(1)}%</span>
                         )}
                       </div>
                     </div>
                   )}
-
-                  {/* Routing */}
                   {debug.method && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Routing</p>
-                      <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600
-                                       px-2 py-1 rounded font-medium">
-                        {debug.method}
-                      </span>
+                      <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-2 py-1 rounded font-medium">{debug.method}</span>
                     </div>
                   )}
-
-                  {/* Destination */}
                   {debug.destination && debug.destination !== 'Not detected' && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Destination</p>
@@ -325,125 +319,122 @@ export default function ChatSection() {
                       </div>
                     </div>
                   )}
-
-                  {/* Match score */}
-                  {debug.score !== undefined && (
-                    <div>
-                      <p className="text-xs text-stone-400 font-mono mb-1">Semantic Match</p>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <BarChart2 size={12} className="text-stone-400" />
-                          <ConfBadge level={debug.matchConf} />
-                        </div>
-                        <span className="text-sm font-semibold text-stone-700 flex-shrink-0">
-                          {(debug.score * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      {/* Score bar */}
-                      <div className="mt-2 h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-teal-400 rounded-full transition-all duration-500"
-                             style={{ width: `${Math.min(debug.score * 100, 100)}%` }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Matched question */}
                   {debug.matchedQ && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Matched Q</p>
-                      <p className="text-xs text-stone-500 italic leading-relaxed bg-stone-50
-                                    px-2 py-1.5 rounded border border-stone-100">
-                        {debug.matchedQ}
-                      </p>
+                      <p className="text-xs text-stone-500 italic leading-relaxed bg-stone-50 px-2 py-1.5 rounded border border-stone-100">{debug.matchedQ}</p>
                     </div>
                   )}
-
-                  {/* Alternatives */}
                   {(debug.alts?.length ?? 0) > 0 && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-2">Alternatives</p>
                       <div className="space-y-1">
                         {debug.alts!.map((a, i) => (
                           <div key={i} className="flex items-center gap-2">
-                            <code className="text-xs text-stone-500 font-mono truncate flex-1">
-                              {a.intent}
-                            </code>
-                            <span className="text-xs text-stone-400 flex-shrink-0">
-                              {(a.confidence * 100).toFixed(1)}%
-                            </span>
+                            <code className="text-xs text-stone-500 font-mono truncate flex-1">{a.intent}</code>
+                            <span className="text-xs text-stone-400 flex-shrink-0">{(a.confidence * 100).toFixed(1)}%</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
                 </div>
               ) : (
-                <div className="px-4 py-6 text-center">
-                  <Zap size={20} className="mx-auto mb-2 text-stone-300" />
-                  <p className="text-xs text-stone-400">
-                    Pipeline analysis will appear here after your first query.
-                  </p>
+                <div className="py-6 text-center">
+                  <Zap size={18} className="mx-auto mb-2 text-stone-300" />
+                  <p className="text-xs text-stone-400">Pipeline analysis will appear here after your first query.</p>
+                </div>
+              )}
+
+              {/* Raw vs Polished */}
+              {rawAnswer && (
+                <div className="border-t border-stone-100 pt-4 space-y-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Database size={12} className="text-blue-500" />
+                      <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">Raw Retrieval</span>
+                    </div>
+                    <p className="text-xs text-stone-500 leading-relaxed bg-stone-50 px-2 py-1.5 rounded border border-stone-100">{rawAnswer}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Sparkles size={12} className="text-amber-500" />
+                      <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">LLM Polished</span>
+                    </div>
+                    <p className="text-xs text-stone-500 leading-relaxed bg-stone-50 px-2 py-1.5 rounded border border-stone-100">
+                      {[...messages].reverse().find(m => m.role === 'assistant')?.content ?? ''}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Raw retrieval vs LLM */}
-            {rawAnswer && (
-              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-
-                {/* Raw retrieval */}
-                <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-2">
-                  <Database size={14} className="text-blue-500" />
-                  <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">
-                    Raw Retrieval
-                  </span>
-                </div>
-                <div className="px-4 py-3">
-                  <p className="text-xs text-stone-500 leading-relaxed">{rawAnswer}</p>
-                </div>
-
-                {/* LLM polished */}
-                <div className="px-4 py-3 border-t border-stone-100 flex items-center gap-2">
-                  <Sparkles size={14} className="text-amber-500" />
-                  <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">
-                    LLM Polished
-                  </span>
-                </div>
-                <div className="px-4 pb-4">
-                  <p className="text-xs text-stone-500 leading-relaxed">
-                    {[...messages].reverse().find(m => m.role === 'assistant')?.content ?? ''}
-                  </p>
-                </div>
-
+          {/* ── Resources tab ── */}
+          {tab === 'resources' && (
+            <div className="p-4 space-y-4">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-widest mb-3">HF Models &amp; Data</p>
+              <div className="space-y-2">
+                {RESOURCES.map(r => (
+                  <a key={r.label} href={r.href} target="_blank" rel="noopener noreferrer"
+                    className="flex items-start gap-3 p-2.5 rounded-xl border border-stone-100 hover:border-amber-200 hover:bg-amber-50 transition-all group">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {r.badge === 'Code'
+                        ? <GitBranch size={14} className="text-stone-400 group-hover:text-amber-600 transition-colors" />
+                        : <ExternalLink size={14} className="text-stone-400 group-hover:text-amber-600 transition-colors" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-semibold text-stone-700 group-hover:text-amber-700 transition-colors">{r.label}</span>
+                        <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">{r.badge}</span>
+                      </div>
+                      <code className="text-xs text-stone-400 font-mono truncate block">{r.path}</code>
+                    </div>
+                  </a>
+                ))}
               </div>
-            )}
+              <div className="pt-3 border-t border-stone-100">
+                <p className="text-xs text-stone-400 font-mono">Base encoder: google/muril-base-cased</p>
+                <p className="text-xs text-stone-400 font-mono mt-1">Framework: PyTorch · Gradio · Next.js</p>
+              </div>
+            </div>
+          )}
 
-            {/* Stats card */}
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4">
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">
-                Model Stats
-              </p>
-              <div className="grid grid-cols-2 gap-y-3">
+          {/* ── Info tab ── */}
+          {tab === 'info' && (
+            <div className="p-4 space-y-4">
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  ['Accuracy',    '97.89%'],
-                  ['Macro-F1',    '0.9787'],
-                  ['Intents',     '44'],
-                  ['Destinations','51'],
-                  ['Q&A pairs',   '221,799'],
-                  ['Encoder',     'MuRIL'],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <p className="text-xs text-amber-600 font-mono">{k}</p>
-                    <p className="text-sm font-semibold text-amber-900">{v}</p>
+                  ['97.89%', 'Intent Accuracy'],
+                  ['0.9787',  'Macro-F1'],
+                  ['221,799', 'Q&A Pairs'],
+                  ['100%',    'Recall@1'],
+                ].map(([v, l]) => (
+                  <div key={l} className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                    <p className="text-sm font-bold text-amber-900">{v}</p>
+                    <p className="text-xs text-amber-600 font-mono">{l}</p>
                   </div>
                 ))}
               </div>
-            </div>
 
-          </div>
+              {/* Expandable reveals */}
+              <Expandable label="Intents"      count={44} items={INTENTS}       color="bg-teal-100 text-teal-700" />
+              <Expandable label="Destinations" count={51} items={DESTINATIONS}  color="bg-amber-100 text-amber-700" />
+
+
+              {/* HF Space quick link */}
+              <a href="https://huggingface.co/spaces/rajk12/assamese-tourism-chatbot"
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 w-full justify-center py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors">
+                <ExternalLink size={12} />
+                Open on HF Space
+              </a>
+            </div>
+          )}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

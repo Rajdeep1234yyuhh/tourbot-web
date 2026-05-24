@@ -2,14 +2,14 @@
 
 import Header from "./components/Header";
 import ChatSection from "./components/ChatSection";
-import Footer from "./components/Footer";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-stone-50">
+    <main className="min-h-screen bg-stone-50 flex flex-col">
       <Header />
-      <ChatSection />
-      <Footer />
+      <div className="flex-1 overflow-hidden">
+        <ChatSection />
+      </div>
     </main>
   );
 }
