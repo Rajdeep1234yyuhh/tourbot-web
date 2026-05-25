@@ -83,13 +83,8 @@ async function cleanAnswer(answer: string): Promise<string> {
         messages: [{
           role:    "system",
           content:
-            "You clean up Assam tourism answer text. Rules: " +
-            "(1) Remove ONLY the 'DestinationName t —' segment (destination + 't' + em-dash) wherever it appears — for example remove 'Tezpur t —' or 'Kaziranga t —'; but if there is a meaningful topic word before it like 'Crowd info —' or 'Cost details —', KEEP that topic word and only remove the destination part; " +
-            "(2) Remove standalone em-dashes '—' used only as separators — but KEEP regular hyphens inside data ranges like '15-28°C', 'October-March', '₹1000-2000', 'Jun-Sep'; " +
-            "(3) You may add up to 5 natural words at the start to make the answer begin smoothly but do NOT add any new facts; " +
-            "(4) Do NOT change any number, price, date, place name, or factual detail; " +
-            "(5) Do NOT use Bengali words — forbidden: 'jemon', 'jonno', 'ache', 'theke'; " +
-            "(6) Return only the cleaned answer text, nothing else.",
+            "Return ONLY the cleaned text — no explanation, no commentary.\n" +
+            "Fix: remove 'Word t —' patterns (e.g. 'Kaziranga t —', 'Tezpur t —'). Keep topic labels before them (e.g. 'Crowd info —' → keep 'Crowd info'). Remove standalone '—' separators. Keep hyphens in ranges ('15-28°C', 'Oct-March', '₹1000-2000'). Do not change any fact, number, price, or place name.",
         }, {
           role:    "user",
           content: answer,
