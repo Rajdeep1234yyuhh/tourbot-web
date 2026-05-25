@@ -8,6 +8,26 @@ export const INTENT_OVERRIDES: OverrideRule[] = [
   {
     pattern: new RegExp(
       [
+        'stay[\\s\\S]{0,20}kot',
+        'kot[\\s\\S]{0,20}stay',
+        'thak\\w*[\\s\\S]{0,20}kot',
+        'kot[\\s\\S]{0,20}thak\\w*',
+        'hotel[\\s\\S]{0,20}kot',
+        'kot[\\s\\S]{0,20}hotel',
+        'bhal\\s+stay',
+        'bhal\\s+hotel',
+        'bhal\\s+lodge',
+        'thakibor\\s+jagah',
+        'thakibor\\s+jaiga',
+      ].join('|'),
+      'i'
+    ),
+    intent: 'accommodation_general',
+    prefix: 'Where to stay and accommodation options: ',
+  },
+  {
+    pattern: new RegExp(
+      [
         'budget\\s+stay',
         'budget\\s+hotel',
         'budget\\s+option',
@@ -25,7 +45,7 @@ export const INTENT_OVERRIDES: OverrideRule[] = [
       ].join('|'),
       'i'
     ),
-    intent: 'hotel_price',
+    intent: 'accommodation_price',
     prefix: 'Low budget and affordable accommodation options: ',
   },
   {

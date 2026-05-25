@@ -39,18 +39,20 @@ const DESTINATIONS = [
 ]
 
 const INTENTS = [
-  'hotel_price','best_time_visit','best_time_visit_weather','best_time_visit_festival',
-  'best_time_visit_less_crowd','entry_fee','jeep_safari','elephant_safari',
-  'safari_booking','wildlife_info','duration_stay_general','duration_stay_specific',
-  'reach_distance_time','transport_local','bus_train_info','flight_info',
-  'food_vegetarian','food_local_cuisine','food_restaurant','famous_for',
-  'speciality','activities_general','trekking_hiking','boating_river',
-  'temple_religious','shopping','permits_required','guide_service',
-  'photography_spots','family_travel','budget_travel','luxury_stay',
-  'tips_advice','precaution_carry_things','medical_emergency',
-  'festival_events','nearby_attractions','day_trip','camping',
-  'crowd_info','weather_general','national_park_info','heritage_site',
-  'cultural_info',
+  'accommodation_business','accommodation_couple','accommodation_family',
+  'accommodation_general','accommodation_price','accommodation_solo','accommodation_type',
+  'activities_adventure','activities_ask_must_see','activities_ask_photography_spots',
+  'activities_ask_things_to_do','activities_cultural','activities_wildlife',
+  'best_time_visit','best_time_visit_festival','best_time_visit_less_crowd','best_time_visit_weather',
+  'comparison',
+  'cost_entry','cost_photo_video_additional','cost_trip_budget',
+  'duration_stay_general','duration_stay_long','duration_stay_short',
+  'food_general','food_non_vegetarian','food_price','food_specialty','food_vegetarian',
+  'precaution_carry_things','precaution_general','precaution_safety',
+  'reach_budget','reach_distance_time','reach_fast','reach_general','reach_transport',
+  'speciality_adventure','speciality_culture','speciality_food',
+  'speciality_general','speciality_history','speciality_wildlife',
+  'tips_advice',
 ]
 
 const RESOURCES = [
@@ -307,7 +309,12 @@ export default function ChatSection() {
                   {debug.method && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Routing</p>
-                      <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-2 py-1 rounded font-medium">{debug.method}</span>
+                      <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-2 py-1 rounded font-medium">
+                        {debug.method.includes('Direct')        ? '✓ Raced · Primary won'  :
+                         debug.method.includes('Race corrected') ? '⇄ Raced · Alt won'       :
+                         debug.method.includes('Cross-intent')   ? '↻ Cross-intent search'   :
+                         debug.method}
+                      </span>
                     </div>
                   )}
                   {debug.destination && debug.destination !== 'Not detected' && (
