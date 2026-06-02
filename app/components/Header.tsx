@@ -33,7 +33,7 @@ export default function Header() {
 
         {/* Links */}
         <div className="flex items-center gap-3">
-<a href="https://github.com/rajdeepkotoky"
+<a href="https://github.com/Rajdeep1234yyuhh/porta/tree/master"
              target="_blank" rel="noopener noreferrer"
              className="p-2 text-stone-400 hover:text-stone-700 transition-colors">
             <GitBranch size={18} />

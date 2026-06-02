@@ -60,7 +60,7 @@ const RESOURCES = [
   { label: 'Sentence Encoder',  path: 'rajk12/assamese-tourism-sentence-encoder',    href: 'https://huggingface.co/rajk12/assamese-tourism-sentence-encoder',             badge: 'Model'   },
   { label: 'Q&A Dataset',       path: 'rajk12/assamese-tourism-qa-bank',             href: 'https://huggingface.co/datasets/rajk12/assamese-tourism-qa-bank',             badge: 'Dataset' },
   { label: 'HF Space',          path: 'spaces/rajk12/assamese-tourism-chatbot',      href: 'https://huggingface.co/spaces/rajk12/assamese-tourism-chatbot',               badge: 'Space'   },
-  { label: 'GitHub',            path: 'rajdeepkotoky',                               href: 'https://github.com/rajdeepkotoky',                                            badge: 'Code'    },
+  { label: 'GitHub',            path: 'Rajdeep1234yyuhh/porta',                      href: 'https://github.com/Rajdeep1234yyuhh/porta/tree/master',                       badge: 'Code'    },
 ]
 
 
