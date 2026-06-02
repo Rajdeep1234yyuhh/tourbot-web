@@ -183,11 +183,19 @@ export async function POST(req: NextRequest) {
 
     const { forwardQuery, overriddenIntent, fired } = applyOverrides(message);
 
+    // ── Always prepend detected destination ─────────────────────────────────────
+    // The frontend fuzzy detector handles typos and Assamese suffixes better than
+    // the backend's keyword lookup (which only covers destinations in the Q&A bank).
+    // Prepending the canonical name ensures the backend filters correctly even when
+    // its own detection misses the destination.
+    const detectedDest   = fuzzyDetectDestination(message);
+    const queryWithDest  = detectedDest ? `${detectedDest}: ${forwardQuery}` : forwardQuery;
+
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
 
     try {
-      let res = await callHF(forwardQuery, history ?? [], abort.signal);
+      let res = await callHF(queryWithDest, history ?? [], abort.signal);
 
       if (!res.ok) {
         console.error("HF Space error:", await res.text());
@@ -203,25 +211,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: data.error }, { status: 503 });
       }
 
-      // ── Destination detection fallback ───────────────────────────────────────
-      // When the backend couldn't detect a destination via keyword matching,
-      // try LLM extraction and retry the HF call with the destination prepended.
+      // ── no_destination fallback (destination not in Q&A bank at all) ─────────
       const isNoDestination = (data.debug ?? "").includes("`no_destination`");
-      if (isNoDestination) {
-        const llmDest = fuzzyDetectDestination(message);
-        if (llmDest) {
-          const retryQuery = `${llmDest}: ${forwardQuery}`;
-          const retryRes   = await callHF(retryQuery, history ?? [], abort.signal);
-          if (retryRes.ok) {
-            const retryData = await retryRes.json();
-            if (!retryData.error) data = retryData;
-          }
-        }
+      if (isNoDestination && !detectedDest) {
+        return NextResponse.json(
+          { error: "Which destination are you asking about? Please mention the name." },
+          { status: 200 },
+        );
       }
 
-      // Restore original message in history if a prefix was added
+      // Restore original message in history (backend received queryWithDest)
       const newHistory: Turn[] = (data.history ?? []).map((t: Turn) =>
-        t.role === "user" && t.content === forwardQuery
+        t.role === "user" && (t.content === queryWithDest || t.content === forwardQuery)
           ? { ...t, content: message }
           : t
       );
