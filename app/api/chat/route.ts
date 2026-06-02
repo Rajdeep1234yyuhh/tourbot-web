@@ -101,8 +101,11 @@ async function cleanAnswer(answer: string): Promise<string> {
 }
 
 // ── Fuzzy destination detection ────────────────────────────────────────────────
-// All 51 known destinations — exact names as they appear in the Q&A bank
+// Q&A bank destinations (exact names) + common Assam district/place names.
+// Extra names not in the Q&A bank are still needed so fuzzy detection identifies
+// them and the destination-mismatch guard returns "no info" instead of wrong data.
 const KNOWN_DESTINATIONS = [
+  // Q&A bank destinations
   "Kaziranga National Park", "Majuli Island", "Kamakhya Temple", "Guwahati",
   "Tezpur", "Haflong", "Sivasagar", "Dibru-Saikhowa National Park",
   "Pobitora Wildlife Sanctuary", "Orang National Park", "Jorhat", "Dibrugarh",
@@ -118,6 +121,12 @@ const KNOWN_DESTINATIONS = [
   "Joypur Rainforest", "Bura Chapori Wildlife Sanctuary",
   "Laokhowa Wildlife Sanctuary", "Navagraha Temple", "Basistha Ashram",
   "Doul Govinda Temple", "Barail Wildlife Sanctuary", "Abhayapuri", "Tawang",
+  // Assam districts/places not in Q&A bank — detected so mismatch guard fires
+  "Hailakandi", "Karimganj", "Silchar", "Cachar", "Nagaon", "Golaghat",
+  "Lakhimpur", "Dhemaji", "Nalbari", "Bokakhat", "Diphu", "Hojai",
+  "Morigaon", "Sonitpur", "Karbi Anglong", "Dima Hasao", "Bongaigaon",
+  "Chirang", "Baksa", "Kokrajhar", "Darrang", "Udalguri", "Kamrup",
+  "Lumding", "Tinsukia", "Sibsagar",
 ];
 
 // Bigram Jaccard similarity — handles typos well
@@ -236,10 +245,12 @@ export async function POST(req: NextRequest) {
         [...newHistory].reverse().find(m => m.role === "assistant")?.content ?? "";
 
       // Filter irrelevant sentences then clean formatting
+      // Only run LLM cleaning when there's a real pipeline result (intent present).
+      // Skip for backend error/fallback messages like "I am not sure I understood."
       const intentMatch = (data.debug ?? "").match(/\*\*Intent:\*\*[^\n]*?`([^`]+)`/);
       const intent      = intentMatch?.[1]?.trim() ?? "";
       const filtered    = filterByIntent(rawAnswer, intent);
-      const cleaned     = await cleanAnswer(filtered);
+      const cleaned     = intent ? await cleanAnswer(filtered) : filtered;
 
       // Replace last assistant turn with cleaned answer
       const outHistory = [...newHistory];
