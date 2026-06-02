@@ -274,7 +274,7 @@ export default function ChatSection() {
               placeholder="e.g. Kaziranga t hotel r daam kiman?"
               rows={1}
               style={{ color: '#1c1917', WebkitTextFillColor: '#1c1917' }}
-              className="flex-1 bg-stone-50 resize-none text-sm placeholder:text-stone-400 outline-none font-body max-h-32 overflow-y-auto" />
+              className="flex-1 bg-stone-50 resize-none text-sm placeholder:text-stone-400 outline-none font-body overflow-hidden" />
             <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
               className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center transition-all hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed">
               <Send size={14} />
