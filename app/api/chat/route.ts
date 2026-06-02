@@ -101,17 +101,23 @@ async function cleanAnswer(answer: string): Promise<string> {
 }
 
 // ── Fuzzy destination detection ────────────────────────────────────────────────
-// All 51 known destinations in the dataset
+// All 51 known destinations — exact names as they appear in the Q&A bank
 const KNOWN_DESTINATIONS = [
-  "Kaziranga", "Majuli", "Kamakhya", "Guwahati", "Tezpur", "Haflong",
-  "Sivasagar", "Dibru-Saikhowa", "Jorhat", "Dibrugarh", "Nagaon", "Manas",
-  "Barpeta", "Dhubri", "Goalpara", "Golaghat", "Lakhimpur", "Dhemaji",
-  "Nalbari", "Biswanath", "Bokakhat", "Nameri", "Pobitora", "Orang",
-  "Diphu", "Hajo", "Sualkuchi", "Hailakandi", "Karimganj", "Silchar",
-  "Lumding", "Tinsukia", "Sadiya", "Sibsagar", "Charaideo", "Hojai",
-  "Morigaon", "Sonitpur", "Karbi Anglong", "Dima Hasao", "Cachar",
-  "Bongaigaon", "Chirang", "Baksa", "Kokrajhar", "Dhuburi", "Darrang",
-  "Udalguri", "Tamulpur", "Bajali", "Kamrup",
+  "Kaziranga National Park", "Majuli Island", "Kamakhya Temple", "Guwahati",
+  "Tezpur", "Haflong", "Sivasagar", "Dibru-Saikhowa National Park",
+  "Pobitora Wildlife Sanctuary", "Orang National Park", "Jorhat", "Dibrugarh",
+  "Manas National Park", "Barpeta", "Dhubri", "Goalpara", "Sadiya", "Hajo",
+  "Sualkuchi", "Nameri National Park", "Charaideo Maidams",
+  "Hoollongapar Gibbon Sanctuary", "Umananda Island", "Bhalukpong",
+  "Madan Kamdev", "Garampani", "Kakochang Waterfall", "Panimoor Falls",
+  "Chakrashila Wildlife Sanctuary", "Bishwanath Ghat", "Rudrasagar Lake",
+  "Tocklai Tea Research Institute", "Padum Pukhuri", "Deepor Beel",
+  "Chandubi Lake", "Batadrava Than", "Negheriting Shiva Dol",
+  "Dhekiakhowa Bornamghar", "Bordowa", "Sarthebari",
+  "Pani Dihing Bird Sanctuary", "Sonai Rupai Wildlife Sanctuary",
+  "Joypur Rainforest", "Bura Chapori Wildlife Sanctuary",
+  "Laokhowa Wildlife Sanctuary", "Navagraha Temple", "Basistha Ashram",
+  "Doul Govinda Temple", "Barail Wildlife Sanctuary", "Abhayapuri", "Tawang",
 ];
 
 // Bigram Jaccard similarity — handles typos well
