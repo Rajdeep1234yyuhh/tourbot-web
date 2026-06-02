@@ -108,6 +108,26 @@ export const INTENT_OVERRIDES: OverrideRule[] = [
   {
     pattern: new RegExp(
       [
+        'ki\\s+ki\\s+visit\\s+korib',
+        'ki\\s+ki\\s+dekhib',
+        'ki\\s+ki\\s+jaibo',
+        'ki\\s+ki\\s+place',
+        'ki\\s+ki\\s+attraction',
+        'visit\\s+korib\\w*\\s+lag',
+        'must\\s+see',
+        'must\\s+visit',
+        'places\\s+to\\s+visit',
+        'ki\\s+ki\\s+koribo\\s+lag',
+        'ki\\s+dekhibo\\s+pabo',
+      ].join('|'),
+      'i'
+    ),
+    intent: 'activities_ask_things_to_do',
+    prefix: 'Tourist attractions and places to visit: ',
+  },
+  {
+    pattern: new RegExp(
+      [
         'ki\\s+ki\\s+nibo\\s+lag',
         'ki\\s+ki\\s+carry',
         'ki\\s+nibo\\s+jabole',
