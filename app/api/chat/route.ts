@@ -145,32 +145,25 @@ function jaccardSim(a: Set<string>, b: Set<string>): number {
 // Assamese locative/genitive suffixes that get merged onto place names
 const ASSAMESE_SUFFIXES = /(?:or|ot|te?)$/i;
 
-function fuzzyDetectDestination(query: string): string | null {
+function fuzzyDetectDestination(query: string, threshold = 0.45): string | null {
   const tokens = query.toLowerCase().replace(/[?!,।]/g, " ").split(/\s+/).filter(Boolean);
 
   let best: string | null = null;
   let bestScore = 0;
 
   for (const rawToken of tokens) {
-    // Try with and without common Assamese suffixes
     const variants = [rawToken, rawToken.replace(ASSAMESE_SUFFIXES, "")];
-
     for (const token of variants) {
       if (token.length < 3) continue;
       const tokenBg = bigrams(token);
-
       for (const dest of KNOWN_DESTINATIONS) {
         const score = jaccardSim(tokenBg, bigrams(dest.toLowerCase()));
-        if (score > bestScore) {
-          bestScore = score;
-          best      = dest;
-        }
+        if (score > bestScore) { bestScore = score; best = dest; }
       }
     }
   }
 
-  // 0.45 threshold: high enough to avoid false positives, lenient enough for typos
-  return bestScore >= 0.45 ? best : null;
+  return bestScore >= threshold ? best : null;
 }
 
 // ── HF Space call ──────────────────────────────────────────────────────────────
@@ -235,9 +228,31 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Restore original message in history (backend received queryWithDest)
+      // ── Low-confidence retry with best-guess destination ─────────────────────
+      // When backend returns "I am not sure I understood" (no destination detected,
+      // confidence below LOW_CONF), retry with a lenient fuzzy threshold (0.15) to
+      // find any partial destination match and force a cross-intent retrieval.
+      const tempAnswer = [...(data.history ?? [])].reverse()
+        .find((m: Turn) => m.role === "assistant")?.content ?? "";
+      if (tempAnswer.includes("I am not sure I understood")) {
+        const bestGuessDest = fuzzyDetectDestination(message, 0.15);
+        if (bestGuessDest) {
+          const retryQ   = `${bestGuessDest}: ${forwardQuery}`;
+          const retryRes = await callHF(retryQ, history ?? [], abort.signal);
+          if (retryRes.ok) {
+            const retryData = await retryRes.json();
+            const retryAns  = [...(retryData.history ?? [])].reverse()
+              .find((m: Turn) => m.role === "assistant")?.content ?? "";
+            if (!retryData.error && !retryAns.includes("I am not sure")) {
+              data = retryData;
+            }
+          }
+        }
+      }
+
+      // Restore original message in history (replace any prefixed query with original)
       const newHistory: Turn[] = (data.history ?? []).map((t: Turn) =>
-        t.role === "user" && (t.content === queryWithDest || t.content === forwardQuery)
+        t.role === "user" && t.content !== message
           ? { ...t, content: message }
           : t
       );

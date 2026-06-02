@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  Send, RotateCcw, Cpu, MapPin, Zap, Sparkles, Database,
+  Send, RotateCcw, Cpu, Zap, Sparkles, Database,
   ExternalLink, GitBranch, ChevronDown, ChevronUp,
 } from 'lucide-react'
 
@@ -240,6 +240,19 @@ export default function ChatSection() {
                   ? 'bg-stone-900 text-white rounded-br-md'
                   : 'bg-stone-50 border border-stone-200 text-stone-800 rounded-bl-md'}`}>
                 {msg.content}
+                {msg.role === 'assistant' && msg.content.includes("I am not sure I understood") && (
+                  <div className="mt-3 pt-2.5 border-t border-stone-200">
+                    <p className="text-xs text-stone-400 mb-2">Try one of these:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {EXAMPLES.map(ex => (
+                        <button key={ex} onClick={() => sendMessage(ex)}
+                          className="text-xs font-mono bg-white border border-stone-200 text-stone-500 px-2.5 py-1 rounded-full hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all">
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -319,15 +332,6 @@ export default function ChatSection() {
                          debug.method.includes('Cross-intent')   ? '↻ Cross-intent search'   :
                          debug.method}
                       </span>
-                    </div>
-                  )}
-                  {debug.destination && debug.destination !== 'Not detected' && (
-                    <div>
-                      <p className="text-xs text-stone-400 font-mono mb-1">Destination</p>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin size={12} className="text-amber-500" />
-                        <span className="text-xs text-stone-700 font-medium">{debug.destination}</span>
-                      </div>
                     </div>
                   )}
                   {debug.matchedQ && (
