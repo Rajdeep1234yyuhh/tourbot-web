@@ -226,8 +226,13 @@ export async function POST(req: NextRequest) {
     // the backend's keyword lookup (which only covers destinations in the Q&A bank).
     // Prepending the canonical name ensures the backend filters correctly even when
     // its own detection misses the destination.
-    const detectedDest   = fuzzyDetectDestination(message);
-    const queryWithDest  = detectedDest ? `${detectedDest}: ${forwardQuery}` : forwardQuery;
+    const detectedDest  = fuzzyDetectDestination(message);
+    const alreadyInQuery = detectedDest
+      ? forwardQuery.toLowerCase().includes(detectedDest.toLowerCase())
+      : false;
+    const queryWithDest = (detectedDest && !alreadyInQuery)
+      ? `${detectedDest}: ${forwardQuery}`
+      : forwardQuery;
 
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);

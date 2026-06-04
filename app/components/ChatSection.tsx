@@ -17,9 +17,9 @@ interface DebugInfo {
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const EXAMPLES = [
-  'Kaziranga National Park t hotel r daam kiman?',
-  'Majuli Island jabor fastest way ki?',
-  'Kamakhya Temple t entry fee kiman?',
+  'Kaziranga t hotel r daam kiman?',
+  'Majuli jabor fastest way ki?',
+  'Kamakhya t entry fee kiman?',
   'Guwahati t budget stay r option ki ase?',
   'Tezpur famous kio eman, ki pai khabole?',
 ]
