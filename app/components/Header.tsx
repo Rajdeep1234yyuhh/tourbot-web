@@ -29,6 +29,10 @@ export default function Header() {
              className="text-sm text-stone-500 hover:text-stone-900 transition-colors font-medium">
             Chat
           </Link>
+          <Link href="/intent_history"
+             className="text-sm text-stone-500 hover:text-stone-900 transition-colors font-medium">
+            Log
+          </Link>
         </nav>
 
         {/* Links */}

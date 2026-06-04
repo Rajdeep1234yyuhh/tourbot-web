@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { appendFileSync, existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { applyOverrides } from "@/lib/intentOverrides";
+
+// ── OOD CSV logger ─────────────────────────────────────────────────────────────
+const LOG_FILE    = join(process.cwd(), "ood_log.csv");
+const LOG_HEADERS = "row_id,timestamp,query,predicted_intent,confidence_pct,routing_tier,retrieved_answer_preview,verdict";
+
+function csvEscape(s: string | number): string {
+  const str = String(s).replace(/\r?\n/g, " ");
+  return /[,"]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function logQuery(
+  query: string, intent: string, confidencePct: number,
+  routingTier: string, answerPreview: string,
+): void {
+  try {
+    const fileExists = existsSync(LOG_FILE);
+    const rowId = fileExists
+      ? Math.max(0, readFileSync(LOG_FILE, "utf-8").split("\n").filter(Boolean).length - 1)
+      : 0;
+    const row = [
+      rowId, new Date().toISOString().slice(0, 19), query.trim(),
+      intent, confidencePct.toFixed(1), routingTier,
+      answerPreview.slice(0, 120), "",
+    ].map(csvEscape).join(",");
+    if (!fileExists) appendFileSync(LOG_FILE, LOG_HEADERS + "\n", "utf-8");
+    appendFileSync(LOG_FILE, row + "\n", "utf-8");
+  } catch { /* silently fail — never break the main flow */ }
+}
 
 const HF_SPACE_URL = process.env.HF_SPACE_URL ?? "https://rajk12-assamese-tourism-chatbot.hf.space";
 const TIMEOUT_MS   = 120_000;
@@ -277,6 +307,13 @@ export async function POST(req: NextRequest) {
       const debugOut = fired && overriddenIntent
         ? `**Override:** \`${overriddenIntent}\` *(keyword rule)*\n\n${data.debug ?? ""}`
         : (data.debug ?? "");
+
+      // Silent OOD logging
+      if (intent) {
+        const confPct    = parseFloat(debugOut.match(/—\s*([\d.]+)%/)?.[1] ?? "0");
+        const routingRaw = debugOut.match(/\*\*Routing:\*\*\s*([^\n]+)/)?.[1]?.trim() ?? "";
+        logQuery(message, intent, confPct, routingRaw, rawAnswer);
+      }
 
       return NextResponse.json({
         history:   outHistory,
