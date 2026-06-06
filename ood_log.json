@@ -178,5 +178,25 @@
     "routing_tier": "✓ Direct",
     "retrieved_answer_preview": "Non-veg food — Guwahati t — Must try Assamese - Paradise Restaurant (thali), Khorikaa (authentic), Naga Kitchen (NE cuis",
     "verdict": ""
+  },
+  {
+    "id": "1780778849851",
+    "timestamp": "2026-06-06T20:47:29",
+    "query": "Guwahatit ত vegetarian খাবাৰ available আছে নে?\",\nNon-veg food - Guwahati t ATDC lodges, Must try Assamese - Paradise Restaurant (thali), Khorikaa (authentic), Naga Kitchen (NE cuisines). Street food - Fancy Bazaar pani puri, Chatpati. Maas-tenga, Khar, Duck curry. Tea culture strong. Pan shops. North Indian, Chinese, South Indian everywhere. Cafes. Nightlife developing. GS Road, Zoo Road food streets. Budget to fine-dining all. Excellent Assamese cuisine hub, all cuisines available, and street food rich\nintent 44.4%\ne.g. Kaziranga t hotel r daam kiman?\n\nPress Enter to send\n\ndebug\nresources\ninfo\nPipeline Debug\nIntent\n\nfood_non_vegetarian\n44.4%\nRouting\n\n✓ Raced · Primary won\nhigh\nAlternatives\n\nfood_vegetarian\n42.6%\nreach_fast\n3.1%\n\nI have written veg still giving for non veg",
+    "predicted_intent": "food_vegetarian",
+    "confidence_pct": 35.8,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Vegetarian food — Kaziranga National Park t — Pure veg food u available.",
+    "verdict": ""
+  },
+  {
+    "id": "1780778867567",
+    "timestamp": "2026-06-06T20:47:47",
+    "query": "{destination} ত vegetarian খাবাৰ available আছে নে?\",",
+    "predicted_intent": "food_non_vegetarian",
+    "confidence_pct": 44,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Non-veg food — Barpeta t — Satra area pure vegetarian. Simple Assamese meals. Town basic restaurants - rice, dal, curry.",
+    "verdict": ""
   }
 ]

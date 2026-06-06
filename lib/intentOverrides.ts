@@ -5,39 +5,6 @@ interface OverrideRule {
 }
 
 export const INTENT_OVERRIDES: OverrideRule[] = [
-  // ── Food: non-vegetarian (must precede the veg rule) ──────────────────────────
-  {
-    pattern: new RegExp(
-      [
-        'non[-\\s]?veg(etarian)?',
-        'non\\s+veg\\b',
-        'maas[-\\s]tenga',
-        '\\bkhar\\b.{0,20}food',
-        'duck\\s+(curry|meat|dish)',
-        '\\bpork\\b',
-      ].join('|'),
-      'i'
-    ),
-    intent: 'food_non_vegetarian',
-    prefix: 'Non-vegetarian food options: ',
-  },
-  // ── Food: vegetarian ──────────────────────────────────────────────────────────
-  {
-    pattern: new RegExp(
-      [
-        '(?<!non[-\\s]{0,3})vegetarian',
-        '\\bveg\\s+(food|khaba|restaurant|option|dish|item|meal)',
-        '\\bniramish\\b',
-        'vegetarian\\s+(khaba|food|option|restaurant|dish)',
-        'veg\\s+only',
-        'only\\s+veg',
-        'pure\\s+veg',
-      ].join('|'),
-      'i'
-    ),
-    intent: 'food_vegetarian',
-    prefix: 'Vegetarian food options and restaurants: ',
-  },
   {
     pattern: new RegExp(
       [
