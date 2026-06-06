@@ -158,5 +158,25 @@
     "routing_tier": "✓ Direct",
     "retrieved_answer_preview": "Price-wise Kaziranga National Park t — ATDC lodges, Wild Grass Resort, Infinity Resort, Borgos Resort are popular option",
     "verdict": ""
+  },
+  {
+    "id": "1780778460542",
+    "timestamp": "2026-06-06T20:41:00",
+    "query": "{destination} ত vegetarian খাবাৰ available আছে নে?\",",
+    "predicted_intent": "food_non_vegetarian",
+    "confidence_pct": 46.1,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Non-veg food — Guwahati t — Must try Assamese - Paradise Restaurant (thali), Khorikaa (authentic), Naga Kitchen (NE cuis",
+    "verdict": ""
+  },
+  {
+    "id": "1780778486607",
+    "timestamp": "2026-06-06T20:41:26",
+    "query": "Guwahatit ত vegetarian খাবাৰ available আছে নে?\",",
+    "predicted_intent": "food_non_vegetarian",
+    "confidence_pct": 44.4,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Non-veg food — Guwahati t — Must try Assamese - Paradise Restaurant (thali), Khorikaa (authentic), Naga Kitchen (NE cuis",
+    "verdict": ""
   }
 ]
