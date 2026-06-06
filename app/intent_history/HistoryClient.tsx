@@ -3,18 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { LogRow } from '@/lib/firestoreLog'
 
-type Stats = { total: number; labelled: number; correct: number; lowperf: number; wrong: number; unsure: number; retrieval: number }
+type Stats = { total: number; labelled: number; correct: number; lowperf: number; wrong: number; unsure: number }
 
 function computeStats(rows: LogRow[]): Stats {
   const labelled = rows.filter(r => r.verdict)
   return {
     total:    rows.length,
     labelled: labelled.length,
-    correct:   labelled.filter(r => r.verdict === 'Correct').length,
-    lowperf:   labelled.filter(r => r.verdict === 'Low Conf').length,
-    wrong:     labelled.filter(r => r.verdict === 'Wrong').length,
-    unsure:    labelled.filter(r => r.verdict === 'Unsure').length,
-    retrieval: labelled.filter(r => r.verdict === 'Correct').length,
+    correct:  labelled.filter(r => r.verdict === 'Correct').length,
+    lowperf:  labelled.filter(r => r.verdict === 'Low Conf').length,
+    wrong:    labelled.filter(r => r.verdict === 'Wrong').length,
+    unsure:   labelled.filter(r => r.verdict === 'Unsure').length,
   }
 }
 
@@ -62,9 +61,8 @@ export default function HistoryClient() {
     }
   }
 
-  const stats          = computeStats(rows)
-  const accuracy       = stats.labelled > 0 ? Math.round(((stats.correct + stats.lowperf) / stats.labelled) * 100) : null
-  const retrievalAcc   = stats.labelled > 0 ? Math.round((stats.correct / stats.labelled) * 100) : null
+  const stats    = computeStats(rows)
+  const accuracy = stats.labelled > 0 ? Math.round(((stats.correct + stats.lowperf) / stats.labelled) * 100) : null
 
   return (
     <div className="min-h-screen bg-stone-50 p-6">
@@ -89,7 +87,7 @@ export default function HistoryClient() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
           {([
             ['Total',    stats.total,    'text-stone-700', 'border-stone-200'],
             ['Labelled', stats.labelled, 'text-stone-700', 'border-stone-200'],
@@ -97,8 +95,7 @@ export default function HistoryClient() {
             ['Low Conf', stats.lowperf,  'text-blue-700',  'border-blue-200'],
             ['Wrong',    stats.wrong,    'text-red-700',   'border-red-200'],
             ['Unsure',   stats.unsure,   'text-amber-700', 'border-amber-200'],
-            ['Intent Acc',    accuracy      !== null ? `${accuracy}%`      : 'N/A', 'text-stone-700',  'border-stone-200'],
-            ['Retrieval Acc', retrievalAcc  !== null ? `${retrievalAcc}%`  : 'N/A', 'text-violet-700', 'border-violet-200'],
+            ['Intent Acc', accuracy !== null ? `${accuracy}%` : 'N/A', 'text-stone-700', 'border-stone-200'],
           ] as const).map(([label, value, textCls, borderCls]) => (
             <div key={label} className={`bg-white border ${borderCls} rounded-xl px-4 py-3 text-center`}>
               <p className={`text-xl font-bold ${textCls}`}>{value}</p>

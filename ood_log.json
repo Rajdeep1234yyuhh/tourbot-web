@@ -197,6 +197,16 @@
     "confidence_pct": 44,
     "routing_tier": "✓ Direct",
     "retrieved_answer_preview": "Non-veg food — Barpeta t — Satra area pure vegetarian. Simple Assamese meals. Town basic restaurants - rice, dal, curry.",
-    "verdict": ""
+    "verdict": "Wrong"
+  },
+  {
+    "id": "1780778996186",
+    "timestamp": "2026-06-06T20:49:56",
+    "query": "Guwahatit ত vegetarian খাবাৰ available আছে নে?",
+    "predicted_intent": "food_non_vegetarian",
+    "confidence_pct": 43.9,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Non-veg food — Guwahati t — Maas-tenga, Khar, Duck curry. Excellent Assamese cuisine hub, all cuisines available, and st",
+    "verdict": "Wrong"
   }
 ]
