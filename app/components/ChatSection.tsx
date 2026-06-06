@@ -7,10 +7,11 @@ import {
 } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Message { role: 'user' | 'assistant'; content: string }
+interface Message { role: 'user' | 'assistant'; content: string; logId?: string; verdict?: string; confidence?: number; retrievalSim?: number }
 interface DebugInfo {
   intent?: string; confidence?: number; destination?: string
   matchConf?: string; matchedQ?: string; method?: string
+  retrievalSim?: number
   alts?: { intent: string; confidence: number }[]
   raw?: string; override?: string
 }
@@ -81,16 +82,32 @@ function parseDebug(md: string): DebugInfo {
   }
   const confMatch = md.match(/— ([\d.]+)%/)
   const confLMatch = md.match(/\((high|medium|low)\)/)
+  // Try to extract a numeric retrieval similarity score from several possible formats
+  const simPatterns = [
+    /\*\*(?:Match\s*(?:Sim|Score|Conf)|Sim(?:ilarity)?|Retrieval):\*\*\s*([\d.]+)/i,
+    /[Ss]im(?:ilarity)?[=:\s]+([\d.]+)/,
+    /([\d.]+)\s*\((?:high|medium|low)\)/,
+  ]
+  let retrievalSim: number | undefined
+  for (const p of simPatterns) {
+    const m = md.match(p)
+    if (m) {
+      const v = parseFloat(m[1])
+      retrievalSim = v > 1 ? v : v * 100   // handle 0.94 → 94 or 94 → 94
+      break
+    }
+  }
   const alts: { intent: string; confidence: number }[] = []
   for (const m of [...md.matchAll(/- `([^`]+)` \(([\d.]+)%\)/g)])
     alts.push({ intent: m[1], confidence: parseFloat(m[2]) / 100 })
   return {
-    intent:      get('Intent'),
-    confidence:  confMatch   ? parseFloat(confMatch[1]) / 100 : undefined,
-    destination: getAfter('Destination'),
-    matchConf:   confLMatch  ? confLMatch[1]                  : undefined,
-    matchedQ:    md.match(/\*\*Matched Q:\*\*\s*\*?([^*\n]+)/)?.[1]?.trim(),
-    method:      getAfter('Routing'),
+    intent:       get('Intent'),
+    confidence:   confMatch   ? parseFloat(confMatch[1]) / 100 : undefined,
+    destination:  getAfter('Destination'),
+    matchConf:    confLMatch  ? confLMatch[1]                  : undefined,
+    matchedQ:     md.match(/\*\*Matched Q:\*\*\s*\*?([^*\n]+)/)?.[1]?.trim(),
+    method:       getAfter('Routing'),
+    retrievalSim,
     alts,
     raw: md,
     override: md.match(/\*\*Override:\*\*\s*`([^`]+)`/)?.[1],
@@ -136,13 +153,14 @@ function Expandable({ label, count, items, color }: { label: string; count: numb
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ChatSection() {
-  const [messages,  setMessages]  = useState<Message[]>([])
-  const [input,     setInput]     = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [debug,     setDebug]     = useState<DebugInfo>({})
-  const [rawAnswer, setRawAnswer] = useState('')
-  const [hfHistory, setHfHistory] = useState<{role:string;content:string}[]>([])
-  const [tab,       setTab]       = useState<'debug'|'resources'|'info'>('info')
+  const [messages,       setMessages]       = useState<Message[]>([])
+  const [input,          setInput]          = useState('')
+  const [loading,        setLoading]        = useState(false)
+  const [debug,          setDebug]          = useState<DebugInfo>({})
+  const [rawAnswer,      setRawAnswer]      = useState('')
+  const [polishedAnswer, setPolishedAnswer] = useState('')
+  const [hfHistory,      setHfHistory]      = useState<{role:string;content:string}[]>([])
+  const [tab,            setTab]            = useState<'debug'|'resources'|'info'>('info')
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
@@ -172,12 +190,21 @@ export default function ChatSection() {
         const lastMsg = [...newHistory].reverse().find(m => m.role === 'assistant')
         const answer  = lastMsg?.content ?? 'No response.'
         setHfHistory(newHistory)
-        setMessages(prev => [...prev, { role: 'assistant', content: answer }])
-        setDebug(parseDebug(data.debug ?? ''))
+        const parsedDbg = parseDebug(data.debug ?? '')
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: answer,
+          logId: data.logId,
+          confidence: parsedDbg.confidence,
+          retrievalSim: parsedDbg.retrievalSim,
+        }])
+        setDebug(parsedDbg)
         setRawAnswer(data.rawAnswer ?? '')
+        setPolishedAnswer(answer)
         setTab('debug')
       }
-    } catch {
+    } catch (err) {
+      console.error('[Chat] sendMessage error:', err)
       setMessages(prev => [...prev, { role: 'assistant', content: 'Could not reach the server. Please try again.' }])
     } finally {
       setLoading(false)
@@ -190,7 +217,7 @@ export default function ChatSection() {
   }
 
   const reset = () => {
-    setMessages([]); setHfHistory([]); setDebug({}); setRawAnswer(''); setInput('')
+    setMessages([]); setHfHistory([]); setDebug({}); setRawAnswer(''); setPolishedAnswer(''); setInput('')
     setTab('info'); inputRef.current?.focus()
   }
 
@@ -234,7 +261,7 @@ export default function ChatSection() {
             </div>
           )}
           {messages.map((msg, i) => (
-            <div key={i} className={`msg-enter flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`msg-enter flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed
                 ${msg.role === 'user'
                   ? 'bg-stone-900 text-white rounded-br-md'
@@ -254,6 +281,20 @@ export default function ChatSection() {
                   </div>
                 )}
               </div>
+              {msg.role === 'assistant' && (msg.confidence !== undefined || msg.retrievalSim !== undefined) && (
+                <div className="flex items-center gap-2 mt-1 ml-1">
+                  {msg.confidence !== undefined && (
+                    <span className="text-[10px] font-mono text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                      intent {(msg.confidence * 100).toFixed(1)}%
+                    </span>
+                  )}
+                  {msg.retrievalSim !== undefined && (
+                    <span className="text-[10px] font-mono text-teal-600 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">
+                      sim {msg.retrievalSim.toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {loading && (
@@ -326,18 +367,26 @@ export default function ChatSection() {
                   {debug.method && (
                     <div>
                       <p className="text-xs text-stone-400 font-mono mb-1">Routing</p>
-                      <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-2 py-1 rounded font-medium">
-                        {debug.method.includes('Direct')        ? '✓ Raced · Primary won'  :
-                         debug.method.includes('Race corrected') ? '⇄ Raced · Alt won'       :
-                         debug.method.includes('Cross-intent')   ? '↻ Cross-intent search'   :
-                         debug.method}
-                      </span>
-                    </div>
-                  )}
-                  {debug.matchedQ && (
-                    <div>
-                      <p className="text-xs text-stone-400 font-mono mb-1">Matched Q</p>
-                      <p className="text-xs text-stone-500 italic leading-relaxed bg-stone-50 px-2 py-1.5 rounded border border-stone-100">{debug.matchedQ}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs bg-stone-50 border border-stone-200 text-stone-600 px-2 py-1 rounded font-medium">
+                          {debug.method.includes('Direct')        ? '✓ Raced · Primary won'  :
+                           debug.method.includes('Race corrected') ? '⇄ Raced · Alt won'       :
+                           debug.method.includes('Cross-intent')   ? '↻ Cross-intent search'   :
+                           debug.method}
+                        </span>
+                        {debug.retrievalSim !== undefined ? (
+                          <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-1 rounded font-mono">
+                            sim {debug.retrievalSim.toFixed(1)}%
+                          </span>
+                        ) : debug.matchConf ? (
+                          <span className={`text-xs font-semibold px-2 py-1 rounded font-mono
+                            ${debug.matchConf === 'high'   ? 'text-teal-700 bg-teal-50 border border-teal-100' :
+                              debug.matchConf === 'medium' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
+                              'text-stone-500 bg-stone-50 border border-stone-200'}`}>
+                            {debug.matchConf}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   )}
                   {(debug.alts?.length ?? 0) > 0 && (

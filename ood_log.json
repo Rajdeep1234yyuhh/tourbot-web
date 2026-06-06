@@ -1,0 +1,162 @@
+[
+  {
+    "id": "1780611405714",
+    "timestamp": "2026-06-04T22:16:45",
+    "query": "Majuli jabor fastest way ki?",
+    "predicted_intent": "reach_fast",
+    "confidence_pct": 82.7,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Fastest route — Majuli Island t — Neematighat ba Kamalabari ghat r boat service (1-2 hours).",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780611438493",
+    "timestamp": "2026-06-04T22:17:18",
+    "query": "Kaziranga t hotel r daam kiman?",
+    "predicted_intent": "accommodation_price",
+    "confidence_pct": 58.9,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Price-wise Kaziranga National Park t — ATDC lodges, Wild Grass Resort, Infinity Resort, Borgos Resort are popular option",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780611568017",
+    "timestamp": "2026-06-04T22:19:28",
+    "query": "Kamakhya t entry fee kiman?",
+    "predicted_intent": "cost_entry",
+    "confidence_pct": 24.5,
+    "routing_tier": "↻ Cross-intent",
+    "retrieved_answer_preview": "Cost details — Kamakhya Temple t — Entry FREE. VIP darshan ₹500 (skip long queue). Pooja charges extra. VIP darshan ₹500",
+    "verdict": "Low Conf"
+  },
+  {
+    "id": "1780611643939",
+    "timestamp": "2026-06-04T22:20:43",
+    "query": "Kaziranga NAtional Park jabole mon ase",
+    "predicted_intent": "speciality_wildlife",
+    "confidence_pct": 59.7,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Wildlife — Kaziranga National Park t — One-horned rhinoceros aru Asia's largest rhino population. 2400+ one-horned rhino",
+    "verdict": "Unsure"
+  },
+  {
+    "id": "1780660298048",
+    "timestamp": "2026-06-05T11:51:38",
+    "query": "Hajo t transportation cost kiman?",
+    "predicted_intent": "reach_transport",
+    "confidence_pct": 60.1,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Transport options — Hajo t — Guwahati 24 km (40 min). Easy day trip from Guwahati. Guwahati r bus, taxi. Own vehicle bes",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780668606572",
+    "timestamp": "2026-06-05T14:10:06",
+    "query": "Kaziranga t hotel r daam kiman?",
+    "predicted_intent": "accommodation_price",
+    "confidence_pct": 58.9,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Price-wise Kaziranga National Park t — ATDC lodges, Wild Grass Resort, Infinity Resort, Borgos Resort are popular option",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780669731865",
+    "timestamp": "2026-06-05T14:28:51",
+    "query": "Kaziranga t ki animals ase",
+    "predicted_intent": "speciality_wildlife",
+    "confidence_pct": 61,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Wildlife — Kaziranga National Park t — One-horned rhinoceros aru Asia's largest rhino population. 2400+ one-horned rhino",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780669800340",
+    "timestamp": "2026-06-05T14:30:00",
+    "query": "Tezpur summer t jabole bhal ne?",
+    "predicted_intent": "best_time_visit_weather",
+    "confidence_pct": 70.3,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Weather — Tezpur t — Subtropical. Hot summer, mild winter, wet monsoon. Pleasant winters.",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780669822791",
+    "timestamp": "2026-06-05T14:30:22",
+    "query": "Tezpur gole ki ki nibo lagibo",
+    "predicted_intent": "precaution_carry_things",
+    "confidence_pct": 62.3,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Carry koribo lage — Tezpur t — Gateway for Tawang (ILP here), Agnigarh sunset beautiful, good base for day trips (Orang,",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780669952484",
+    "timestamp": "2026-06-05T14:32:32",
+    "query": "Tezpur t crowd kenekua",
+    "predicted_intent": "best_time_visit_less_crowd",
+    "confidence_pct": 61.2,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Crowd info — Tezpur t — Winter best overall. Transit point year-round but plan around Tawang season if heading there. Mo",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780670015480",
+    "timestamp": "2026-06-05T14:33:35",
+    "query": "Panimoor Falls t old man jabo pare ne?",
+    "predicted_intent": "best_time_visit_festival",
+    "confidence_pct": 29.6,
+    "routing_tier": "↻ Cross-intent",
+    "retrieved_answer_preview": "Festival info — Panimoor Falls t — Monsoon (July-Sep) waterfall peak, trekking challenging but worth it. Post-monsoon (O",
+    "verdict": "Wrong"
+  },
+  {
+    "id": "1780670102417",
+    "timestamp": "2026-06-05T14:35:02",
+    "query": "Panimur falls visit koribole cold cloth nibo lagibo ne",
+    "predicted_intent": "best_time_visit_weather",
+    "confidence_pct": 47,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Weather — Pani Dihing Bird Sanctuary t — Sivasagar district. Hot summer, mild winter, wet monsoon (wetland expands).",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780670124860",
+    "timestamp": "2026-06-05T14:35:24",
+    "query": "Manas National Park tiger risk ase neki",
+    "predicted_intent": "speciality_wildlife",
+    "confidence_pct": 51.1,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Wildlife — Manas National Park t — UNESCO World Heritage Site, Tiger Reserve, Biosphere Reserve - only one in NE with al",
+    "verdict": "Correct"
+  },
+  {
+    "id": "1780670164377",
+    "timestamp": "2026-06-05T14:36:04",
+    "query": "Manas National Park r clean water pam ne?",
+    "predicted_intent": "speciality_wildlife",
+    "confidence_pct": 39.4,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Wildlife — Manas National Park t — UNESCO World Heritage Site, Tiger Reserve, Biosphere Reserve - only one in NE with al",
+    "verdict": "Wrong"
+  },
+  {
+    "id": "1780756947241",
+    "timestamp": "2026-06-06T14:42:27",
+    "query": "Kaziranga t hotel r daam kiman?",
+    "predicted_intent": "accommodation_price",
+    "confidence_pct": 58.9,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Price-wise Kaziranga National Park t — ATDC lodges, Wild Grass Resort, Infinity Resort, Borgos Resort are popular option",
+    "verdict": ""
+  },
+  {
+    "id": "1780760412492",
+    "timestamp": "2026-06-06T15:40:12",
+    "query": "Kaziranga t hotel r daam kiman?",
+    "predicted_intent": "accommodation_price",
+    "confidence_pct": 58.9,
+    "routing_tier": "✓ Direct",
+    "retrieved_answer_preview": "Price-wise Kaziranga National Park t — ATDC lodges, Wild Grass Resort, Infinity Resort, Borgos Resort are popular option",
+    "verdict": ""
+  }
+]

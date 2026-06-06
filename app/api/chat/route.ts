@@ -1,36 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { appendFileSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
 import { applyOverrides } from "@/lib/intentOverrides";
-
-// ── OOD CSV logger ─────────────────────────────────────────────────────────────
-const LOG_FILE    = join(process.cwd(), "ood_log.csv");
-const LOG_HEADERS = "row_id,timestamp,query,predicted_intent,confidence_pct,routing_tier,retrieved_answer_preview,verdict";
-
-function csvEscape(s: string | number): string {
-  const str = String(s).replace(/\r?\n/g, " ");
-  return /[,"]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-}
-
-function logQuery(
-  query: string, intent: string, confidencePct: number,
-  routingTier: string, answerPreview: string,
-): void {
-  try {
-    const fileExists = existsSync(LOG_FILE);
-    const rowId = fileExists
-      ? Math.max(0, readFileSync(LOG_FILE, "utf-8").split("\n").filter(Boolean).length - 1)
-      : 0;
-    const row = [
-      rowId, new Date().toISOString().slice(0, 19), query.trim(),
-      intent, confidencePct.toFixed(1), routingTier,
-      answerPreview.slice(0, 120), "",
-    ].map(csvEscape).join(",");
-    if (!fileExists) appendFileSync(LOG_FILE, LOG_HEADERS + "\n", "utf-8");
-    appendFileSync(LOG_FILE, row + "\n", "utf-8");
-  } catch { /* silently fail — never break the main flow */ }
-}
+import { logQuery } from "@/lib/firestoreLog";
 
 const HF_SPACE_URL = process.env.HF_SPACE_URL ?? "https://rajk12-assamese-tourism-chatbot.hf.space";
 const TIMEOUT_MS   = 120_000;
@@ -114,7 +85,7 @@ async function cleanAnswer(answer: string): Promise<string> {
           role:    "system",
           content:
             "Return ONLY the cleaned text — no explanation, no commentary.\n" +
-            "Fix: remove 'Word t —' patterns (e.g. 'Kaziranga t —', 'Tezpur t —'). Keep topic labels before them (e.g. 'Crowd info —' → keep 'Crowd info'). Remove standalone '—' separators. Keep hyphens in ranges ('15-28°C', 'Oct-March', '₹1000-2000'). Do not change any fact, number, price, or place name.",
+            "Fix: in patterns like '[Place] t —' (e.g. 'Kaziranga t —', 'Kaziranga National Park t —'), the 't' is an Assamese code-mix locative marker meaning 'at/in' — preserve it and remove only the ' —' dash separator. E.g. 'Kaziranga National Park t — ATDC lodges' → 'Kaziranga National Park t ATDC lodges'. For non-place topic labels like 'Crowd info —', remove the ' —'. Remove all other standalone '—' separators. Keep hyphens in ranges ('15-28°C', 'Oct-March', '₹1000-2000'). Do not change any fact, number, price, or place name.",
         }, {
           role:    "user",
           content: answer,
@@ -313,17 +284,19 @@ export async function POST(req: NextRequest) {
         ? `**Override:** \`${overriddenIntent}\` *(keyword rule)*\n\n${data.debug ?? ""}`
         : (data.debug ?? "");
 
-      // Silent OOD logging
+      // OOD logging
+      let logId: string | undefined;
       if (intent) {
         const confPct    = parseFloat(debugOut.match(/—\s*([\d.]+)%/)?.[1] ?? "0");
         const routingRaw = debugOut.match(/\*\*Routing:\*\*\s*([^\n]+)/)?.[1]?.trim() ?? "";
-        logQuery(message, intent, confPct, routingRaw, rawAnswer);
+        logId = logQuery(message, intent, confPct, routingRaw, rawAnswer) || undefined;
       }
 
       return NextResponse.json({
         history:   outHistory,
         debug:     debugOut,
         rawAnswer,
+        logId,
       });
 
     } finally {

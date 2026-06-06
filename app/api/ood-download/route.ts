@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-
-const LOG_FILE = join(process.cwd(), "ood_log.csv");
+import { getAllLogs } from "@/lib/firestoreLog";
 
 export async function GET() {
-  if (!existsSync(LOG_FILE))
-    return NextResponse.json({ error: "No log file yet" }, { status: 404 });
+  const rows = await getAllLogs();
+  if (rows.length === 0)
+    return NextResponse.json({ error: "No logs yet" }, { status: 404 });
 
-  const content = readFileSync(LOG_FILE, "utf-8");
-  return new NextResponse(content, {
+  const headers = ["id","timestamp","query","predicted_intent","confidence_pct","routing_tier","retrieved_answer_preview","verdict"];
+  const escape  = (s: string | number) => {
+    const str = String(s).replace(/\r?\n/g, " ");
+    return /[,"]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const csv = [
+    headers.join(","),
+    ...rows.map(r => headers.map(h => escape((r as Record<string,string|number>)[h] ?? "")).join(",")),
+  ].join("\n");
+
+  return new NextResponse(csv, {
     headers: {
       "Content-Type":        "text/csv",
       "Content-Disposition": 'attachment; filename="ood_log.csv"',
