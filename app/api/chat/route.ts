@@ -70,11 +70,26 @@ function filterByIntent(rawAnswer: string, intent: string): string {
   return kept.join(" ").trim() || rawAnswer;
 }
 
-// ── LLM: remove formatting dashes, add minimal connecting intro ────────────────
-async function cleanAnswer(answer: string): Promise<string> {
+// Per-category instructions telling the LLM what to strip as off-topic
+const TOPIC_STRIP: Record<string, string> = {
+  hotel_accommodation:
+    "Remove any sentences about entry fees, ferry/transport fares, bicycle/vehicle rent, safari prices, or camera charges — keep ONLY lodging and stay-related content.",
+  entry_fee:
+    "Remove any sentences about hotel prices, safari bookings, bicycle rent, restaurant prices, or transport fares — keep ONLY entry/ticket fee content.",
+  safari:
+    "Remove any sentences about hotel prices, entry fees for non-safari sites, restaurant prices, or transport fares — keep ONLY safari-related content.",
+  food_restaurant:
+    "Remove any sentences about hotel prices, entry fees, safari costs, or transport fares — keep ONLY food and restaurant content.",
+  transport:
+    "Remove any sentences about hotel prices, entry fees, safari costs, or restaurant prices — keep ONLY transport and travel route content.",
+};
+
+// ── LLM: fix formatting dashes + strip off-topic sentences ────────────────────
+async function cleanAnswer(answer: string, category: string | null): Promise<string> {
   if (!groq || !answer) return answer;
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), GROQ_TIMEOUT);
+  const topicInstruction = category ? `\n${TOPIC_STRIP[category] ?? ""}` : "";
   try {
     const completion = await groq.chat.completions.create(
       {
@@ -85,7 +100,8 @@ async function cleanAnswer(answer: string): Promise<string> {
           role:    "system",
           content:
             "Return ONLY the cleaned text — no explanation, no commentary.\n" +
-            "Fix: in patterns like '[Place] t —' (e.g. 'Kaziranga t —', 'Kaziranga National Park t —'), the 't' is an Assamese code-mix locative marker meaning 'at/in' — preserve it and remove only the ' —' dash separator. E.g. 'Kaziranga National Park t — ATDC lodges' → 'Kaziranga National Park t ATDC lodges'. For non-place topic labels like 'Crowd info —', remove the ' —'. Remove all other standalone '—' separators. Keep hyphens in ranges ('15-28°C', 'Oct-March', '₹1000-2000'). Do not change any fact, number, price, or place name.",
+            "Fix: in patterns like '[Place] t —' (e.g. 'Kaziranga t —', 'Kaziranga National Park t —'), the 't' is an Assamese code-mix locative marker meaning 'at/in' — preserve it and remove only the ' —' dash separator. E.g. 'Kaziranga National Park t — ATDC lodges' → 'Kaziranga National Park t ATDC lodges'. For non-place topic labels like 'Crowd info —', remove the ' —'. Remove all other standalone '—' separators. Keep hyphens in ranges ('15-28°C', 'Oct-March', '₹1000-2000'). Do not change any fact, number, price, or place name." +
+            topicInstruction,
         }, {
           role:    "user",
           content: answer,
@@ -271,7 +287,7 @@ export async function POST(req: NextRequest) {
       const intentMatch = (data.debug ?? "").match(/\*\*Intent:\*\*[^\n]*?`([^`]+)`/);
       const intent      = intentMatch?.[1]?.trim() ?? "";
       const filtered    = filterByIntent(rawAnswer, intent);
-      const cleaned     = intent ? await cleanAnswer(filtered) : filtered;
+      const cleaned     = intent ? await cleanAnswer(filtered, getCategory(intent)) : filtered;
 
       // Replace last assistant turn with cleaned answer
       const outHistory = [...newHistory];
